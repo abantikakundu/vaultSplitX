@@ -5,7 +5,6 @@ import {
   deriveAllocationCommitment,
   deriveClaimNullifier,
   padString32,
-  bigintToBytes32,
   hexToBytes,
   bytesToHex,
   generateRandomHex32,
@@ -20,8 +19,8 @@ interface DistributionManagerProps {
 }
 
 export const DistributionManager: React.FC<DistributionManagerProps> = ({
-  walletConnected,
-  walletAddress,
+  walletConnected: _walletConnected,
+  walletAddress: _walletAddress,
 }) => {
   const [activeTab, setActiveTab] = useState<'organizer' | 'claimant' | 'explorer'>('organizer');
   const [vaultState, setVaultState] = useState<DistributionVaultState | null>(null);
@@ -225,84 +224,103 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-900/40 p-1 rounded-xl backdrop-blur-sm">
-        <button
-          onClick={() => setActiveTab('organizer')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium text-xs md:text-sm transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'organizer'
-              ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>🏛️</span>
-          <span>Organizer Vault Hub</span>
-        </button>
+      {/* Celo-Style Floating Pill Tab Switcher */}
+      <div className="flex justify-center">
+        <div className="inline-flex p-1.5 rounded-pill bg-sky-100/90 border border-sky-200/80 shadow-sm max-w-full overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('organizer')}
+            className={`px-5 py-2.5 rounded-pill font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'organizer'
+                ? 'bg-white text-sky-700 shadow-sm'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <span>🏛️</span>
+            <span>Organizer Hub</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('claimant')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium text-xs md:text-sm transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'claimant'
-              ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border border-purple-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>🛡️</span>
-          <span>Private Claim Portal</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('claimant')}
+            className={`px-5 py-2.5 rounded-pill font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'claimant'
+                ? 'bg-white text-sky-700 shadow-sm'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <span>🛡️</span>
+            <span>Private Claim Portal</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('explorer')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium text-xs md:text-sm transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'explorer'
-              ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>🔍</span>
-          <span>Public Ledger & Privacy Audit</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('explorer')}
+            className={`px-5 py-2.5 rounded-pill font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'explorer'
+                ? 'bg-white text-sky-700 shadow-sm'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <span>🔍</span>
+            <span>Public Ledger & Privacy Audit</span>
+          </button>
+        </div>
       </div>
 
       {/* TAB 1: ORGANIZER VAULT HUB */}
       {activeTab === 'organizer' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Summary & Add Allocation */}
+          {/* Left: Summary & Add Allocation Form */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
-              <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-                <span>⚡</span> Vault Distribution Stats
-              </h3>
-              <p className="text-xs text-slate-400 mb-6">
-                Total aggregate pool committed on Midnight. Individual split amounts remain strictly shielded.
-              </p>
+            {/* Vault Stats Card */}
+            <div className="celo-card p-6 sm:p-7 space-y-6">
+              <div>
+                <div className="chip-pill mb-2 text-[11px]">Treasury Status</div>
+                <h3 className="card-title text-xl flex items-center gap-2">
+                  <span>⚡</span> Vault Distribution Stats
+                </h3>
+                <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                  Total aggregate pool committed on Midnight. Individual split amounts remain strictly shielded.
+                </p>
+              </div>
 
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-                  <span className="text-xs text-slate-400">Total Treasury Pool</span>
-                  <div className="text-2xl font-bold font-mono text-cyan-400 mt-1">
-                    {Number(vaultState?.totalVaultFunds ?? 0n).toLocaleString()} tDUST
+              <div className="space-y-3">
+                {/* Total Pool */}
+                <div className="p-4 rounded-xl bg-sky-50 border border-sky-100">
+                  <span className="text-xs uppercase tracking-wider font-bold text-ink-subtle block">
+                    Total Treasury Pool
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-extrabold font-mono text-sky-600 mt-1">
+                    {Number(vaultState?.totalVaultFunds ?? 0n).toLocaleString()}{' '}
+                    <span className="text-sm font-sans text-sky-700 font-bold">tDUST</span>
                   </div>
                 </div>
 
+                {/* Grid stats */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                    <span className="text-[11px] text-slate-400">Allocations</span>
-                    <div className="text-xl font-bold text-slate-200 mt-0.5">
-                      {vaultState?.commitments.length ?? 0}
+                  <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-100">
+                    <span className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider block">
+                      Allocations
+                    </span>
+                    <div className="text-2xl font-extrabold text-ink font-mono mt-0.5">
+                      0{vaultState?.commitments.length ?? 0}
                     </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                    <span className="text-[11px] text-slate-400">Claims Settled</span>
-                    <div className="text-xl font-bold text-emerald-400 mt-0.5">
-                      {vaultState?.claimedCount ?? 0}
+
+                  <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-100">
+                    <span className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider block">
+                      Claims Settled
+                    </span>
+                    <div className="text-2xl font-extrabold text-emerald-600 font-mono mt-0.5">
+                      0{vaultState?.claimedCount ?? 0}
                     </div>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
-                  <span className="text-slate-400 block mb-1">Batch ID</span>
-                  <span className="font-mono text-slate-300 break-all text-[11px]">
+                {/* Batch ID */}
+                <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-100 text-xs">
+                  <span className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider block mb-1">
+                    Batch Distribution ID
+                  </span>
+                  <span className="font-mono text-ink text-[11px] break-all select-all font-medium">
                     {vaultState?.distributionId}
                   </span>
                 </div>
@@ -310,29 +328,31 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
             </div>
 
             {/* Add New Allocation Form */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">
-                Register New Private Allocation
-              </h4>
-              <p className="text-xs text-slate-400 mb-4">
-                Creates a salted commitment. The amount is never written on-chain.
-              </p>
+            <div className="celo-card p-6 sm:p-7 space-y-4">
+              <div>
+                <h4 className="card-title text-base font-bold text-ink">
+                  Register New Private Allocation
+                </h4>
+                <p className="text-xs text-ink-muted mt-1">
+                  Generates an opaque cryptographic commitment. The amount is never written on-chain.
+                </p>
+              </div>
 
-              <form onSubmit={handleAddAllocation} className="space-y-4">
+              <form onSubmit={handleAddAllocation} className="space-y-4 pt-1">
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Contributor Role / Label</label>
+                  <label className="celo-label">Contributor Role or Label</label>
                   <input
                     type="text"
-                    placeholder="e.g. Frontend Dev, Tech Writer"
+                    placeholder="e.g. Senior Frontend Dev, Tech Writer"
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                    className="celo-input text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Payment Amount (tDUST)</label>
+                  <label className="celo-label">Payment Amount (tDUST)</label>
                   <input
                     type="number"
                     placeholder="e.g. 20000"
@@ -340,28 +360,28 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                     onChange={(e) => setNewAmount(e.target.value)}
                     required
                     min="1"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                    className="celo-input text-xs font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Contributor Secret Passphrase</label>
+                  <label className="celo-label">Contributor Secret Passphrase</label>
                   <input
                     type="text"
                     placeholder="e.g. secret_seed_phrase"
                     value={newRecipientSeed}
                     onChange={(e) => setNewRecipientSeed(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                    className="celo-input text-xs font-mono"
                   />
                 </div>
 
                 {organizerFeedback && (
                   <div
-                    className={`p-3 rounded-lg text-xs ${
+                    className={`p-3.5 rounded-xl text-xs ${
                       organizerFeedback.type === 'success'
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
-                        : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}
                   >
                     {organizerFeedback.message}
@@ -371,32 +391,35 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                 <button
                   type="submit"
                   disabled={isRegistering}
-                  className="w-full py-2.5 px-4 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="btn-pill-primary w-full py-3"
                 >
                   {isRegistering ? (
                     <>
-                      <span className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                      Registering Circuit Commitment…
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Registering Circuit Commitment…</span>
                     </>
                   ) : (
-                    '➕ Register Allocation Commitment'
+                    <>
+                      <span>➕</span>
+                      <span>Register Allocation Commitment</span>
+                    </>
                   )}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Right: Allocation Registry & Claim Token Exporter */}
+          {/* Right: Allocation Registry & Share Details */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="celo-card p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Configured Distribution Shares</h3>
-                  <p className="text-xs text-slate-400">
-                    Organizer's view. You can test claiming any share below.
+                  <h3 className="card-title text-xl">Configured Distribution Shares</h3>
+                  <p className="text-xs sm:text-sm text-ink-muted mt-1">
+                    Organizer view with preloaded reviewer allocations. Test claiming any share below:
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-300">
+                <span className="chip-pill text-xs">
                   {vaultState?.allocations.length ?? 0} Contributor Records
                 </span>
               </div>
@@ -405,47 +428,48 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                 {vaultState?.allocations.map((alloc) => (
                   <div
                     key={alloc.id}
-                    className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/90 hover:border-slate-700 transition-all space-y-3"
+                    className="p-5 rounded-2xl bg-sky-50/70 border border-sky-100 hover:border-sky-300 hover:bg-white hover:shadow-sm transition-all space-y-3"
                   >
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-lg text-sky-700">
                           👤
-                        </span>
+                        </div>
                         <div>
-                          <div className="font-semibold text-sm text-slate-200">{alloc.role}</div>
-                          <div className="text-xs text-slate-400 font-mono">
+                          <div className="font-bold text-sm sm:text-base text-ink">{alloc.role}</div>
+                          <div className="text-xs text-ink-subtle font-mono mt-0.5">
                             Key: {alloc.recipientKey.slice(0, 10)}…{alloc.recipientKey.slice(-6)}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span className="text-sm font-bold font-mono text-cyan-400">
+                          <span className="text-base font-extrabold font-mono text-sky-600">
                             {Number(alloc.amount).toLocaleString()} tDUST
                           </span>
-                          <div className="text-[11px] text-slate-500">Confidential Share</div>
+                          <div className="text-[11px] text-ink-subtle">Confidential Share</div>
                         </div>
 
                         {alloc.claimed ? (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-400 font-medium">
+                          <span className="chip-pill chip-success text-xs font-bold">
                             ✓ Claimed
                           </span>
                         ) : (
                           <button
                             onClick={() => handleQuickFill(alloc)}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-medium transition-all"
+                            className="btn-pill-primary text-xs py-2 px-3.5"
                           >
-                            Claim this Share →
+                            <span>Claim this Share</span>
+                            <span>→</span>
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                      <span>On-chain Commitment:</span>
-                      <span className="text-slate-400">{alloc.commitment.slice(0, 24)}…</span>
+                    <div className="pt-2.5 border-t border-sky-100/80 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-ink-subtle font-mono gap-1">
+                      <span>On-chain Commitment Leaf:</span>
+                      <span className="text-ink-muted font-medium break-all">{alloc.commitment.slice(0, 24)}…</span>
                     </div>
                   </div>
                 ))}
@@ -453,13 +477,13 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
             </div>
 
             {/* Privacy Architecture Notice */}
-            <div className="p-5 rounded-xl bg-cyan-950/20 border border-cyan-800/40 text-xs text-cyan-200/90 space-y-2">
-              <div className="font-semibold text-cyan-300 flex items-center gap-2">
+            <div className="celo-card-flat p-6 bg-sky-100/60 border border-sky-200 text-xs text-ink space-y-2">
+              <div className="font-bold text-sky-800 text-sm flex items-center gap-2">
                 <span>🔒</span> Midnight Privacy Guarantee
               </div>
-              <p>
+              <p className="text-ink-muted leading-relaxed">
                 When you register these allocations, only the 32-byte opaque commitment hashes are
-                recorded on Midnight's public ledger. The amounts (35,000, 25,000, 15,000 tDUST) and
+                recorded on Midnight's public ledger. The individual amounts (35,000, 25,000, 15,000 tDUST) and
                 contributor identities are <strong>never stored on the blockchain</strong>.
               </p>
             </div>
@@ -470,21 +494,21 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
       {/* TAB 2: PRIVATE CLAIM PORTAL */}
       {activeTab === 'claimant' && (
         <div className="max-w-3xl mx-auto space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-6">
-            <div>
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <div className="celo-card p-6 sm:p-10 space-y-6">
+            <div className="space-y-2">
+              <div className="chip-pill text-xs">Zero-Knowledge Settlement</div>
+              <h3 className="card-title text-2xl flex items-center gap-2">
                 <span>🛡️</span> Zero-Knowledge Entitlement Claim
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-sm text-ink-muted leading-relaxed">
                 Enter your private allocation credentials. Midnight verifies your entitlement
-                cryptographically without revealing your identity or your payment amount to the
-                public ledger.
+                cryptographically without revealing your identity or your payment amount to the public ledger.
               </p>
             </div>
 
             {/* Sample Claim Token Presets */}
-            <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
-              <span className="text-xs text-slate-400 block">
+            <div className="p-5 rounded-2xl bg-sky-50 border border-sky-200/70 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted block">
                 Quick Test Credentials (Preloaded from Vault):
               </span>
               <div className="flex flex-wrap gap-2">
@@ -492,17 +516,18 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                   <button
                     key={alloc.id}
                     onClick={() => handleQuickFill(alloc)}
-                    className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-all"
+                    className="chip-pill hover:bg-sky-200 transition-all cursor-pointer text-xs py-1.5 px-3"
                   >
-                    Test {alloc.role} ({Number(alloc.amount).toLocaleString()} tDUST)
+                    <span>Test {alloc.role}</span>
+                    <span className="text-sky-600 font-mono">({Number(alloc.amount).toLocaleString()} tDUST)</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <form onSubmit={handleClaimPayout} className="space-y-4">
+            <form onSubmit={handleClaimPayout} className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="celo-label">
                   Recipient Identity Secret (Private Witness)
                 </label>
                 <input
@@ -511,13 +536,13 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                   value={claimRecipientSecret}
                   onChange={(e) => setClaimRecipientSecret(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-300 focus:outline-none focus:border-purple-500"
+                  className="celo-input celo-input-mono text-xs"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="celo-label">
                     Allocated Amount (tDUST)
                   </label>
                   <input
@@ -527,12 +552,12 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                     onChange={(e) => setClaimAmount(e.target.value)}
                     required
                     min="1"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500"
+                    className="celo-input celo-input-mono text-xs font-bold text-sky-700"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="celo-label">
                     Blinding Salt (32-byte Hex)
                   </label>
                   <input
@@ -541,13 +566,13 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                     value={claimSalt}
                     onChange={(e) => setClaimSalt(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 focus:outline-none focus:border-purple-500"
+                    className="celo-input celo-input-mono text-xs text-ink-muted"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="celo-label">
                   Distribution Batch ID
                 </label>
                 <input
@@ -555,27 +580,27 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                   value={claimDistId}
                   onChange={(e) => setClaimDistId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-400 focus:outline-none focus:border-purple-500"
+                  className="celo-input celo-input-mono text-xs text-ink-muted"
                 />
               </div>
 
               {/* Dynamic ZK Proving Steps */}
               {isProving && (
-                <div className="p-4 rounded-xl bg-purple-950/30 border border-purple-800/50 space-y-2">
+                <div className="p-5 rounded-2xl bg-sky-100/70 border border-sky-300 space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></span>
-                    <span className="text-xs font-medium text-purple-300">{provingStep}</span>
+                    <span className="w-4 h-4 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"></span>
+                    <span className="text-xs sm:text-sm font-bold text-sky-900">{provingStep}</span>
                   </div>
-                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-purple-500 h-1.5 rounded-full animate-pulse w-3/4"></div>
+                  <div className="w-full bg-sky-200 rounded-full h-2 overflow-hidden">
+                    <div className="bg-sky-600 h-2 rounded-full animate-pulse w-3/4"></div>
                   </div>
                 </div>
               )}
 
               {/* Error Notice */}
               {claimError && (
-                <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/50 text-xs text-rose-300 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
+                <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs sm:text-sm text-rose-800 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-rose-900">
                     <span>⚠️</span> Verification Error
                   </div>
                   <p>{claimError}</p>
@@ -584,26 +609,26 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
 
               {/* Success Result */}
               {claimResult && (
-                <div className="p-5 rounded-xl bg-emerald-950/30 border border-emerald-800/60 text-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-emerald-300 flex items-center gap-2">
+                <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs sm:text-sm text-emerald-900 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-base text-emerald-800 flex items-center gap-2">
                       <span>✓</span> {claimResult.message}
                     </span>
-                    <span className="text-[11px] text-slate-400">{claimResult.timestamp}</span>
+                    <span className="chip-pill chip-success text-[11px]">{claimResult.timestamp}</span>
                   </div>
 
-                  <div className="space-y-1.5 font-mono text-[11px] text-slate-300 pt-2 border-t border-emerald-900/50">
-                    <div>
-                      <span className="text-slate-500">Unlinkable Nullifier: </span>
-                      <span className="text-cyan-300 break-all">{claimResult.nullifier}</span>
+                  <div className="space-y-2 font-mono text-xs pt-2 border-t border-emerald-200/60">
+                    <div className="p-2.5 rounded-lg bg-white/70 border border-emerald-200">
+                      <span className="text-emerald-700 font-bold block mb-0.5">Unlinkable Nullifier:</span>
+                      <span className="break-all text-ink">{claimResult.nullifier}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-500">Committed Leaf: </span>
-                      <span className="text-purple-300 break-all">{claimResult.commitment}</span>
+                    <div className="p-2.5 rounded-lg bg-white/70 border border-emerald-200">
+                      <span className="text-emerald-700 font-bold block mb-0.5">Committed Leaf:</span>
+                      <span className="break-all text-ink">{claimResult.commitment}</span>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-emerald-200/80 italic">
+                  <p className="text-xs text-emerald-800 leading-relaxed italic pt-1">
                     Privacy Verified: The transaction published the nullifier to prevent double
                     spending, but your wallet address, identity, and payment amount ({claimAmount} tDUST)
                     were never revealed.
@@ -611,11 +636,11 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="submit"
                   disabled={isProving}
-                  className="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs md:text-sm transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                  className="btn-pill-primary flex-1 py-3.5 px-6 text-sm"
                 >
                   {isProving ? 'Generating ZK Proof…' : '🔐 Prove Entitlement & Claim Share'}
                 </button>
@@ -629,7 +654,7 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
                     setClaimResult(null);
                     setClaimError('Tampered amount set (+10,000 tDUST). Click "Prove Entitlement" to test cryptographic rejection.');
                   }}
-                  className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-medium transition-all"
+                  className="btn-pill-secondary py-3.5 px-5 text-xs text-ink-muted"
                   title="Tamper with amount to verify ZK circuit rejection"
                 >
                   Simulate Cheat Attempt
@@ -643,63 +668,70 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
       {/* TAB 3: CONFIDENTIAL LEDGER EXPLORER & PRIVACY AUDIT */}
       {activeTab === 'explorer' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <span>🔍</span> Public On-Chain Ledger vs. Confidential Client Witnesses
-            </h3>
-            <p className="text-xs text-slate-400 mb-6">
-              Compare what the entire world sees on the Midnight blockchain versus what remains
-              cryptographically private on the participant's device.
-            </p>
+          <div className="celo-card p-6 sm:p-10 space-y-6">
+            <div className="space-y-2">
+              <div className="chip-pill text-xs">Security & Transparency</div>
+              <h3 className="card-title text-2xl flex items-center gap-2">
+                <span>🔍</span> Public On-Chain Ledger vs. Confidential Client Witnesses
+              </h3>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Compare what the entire world sees on the Midnight blockchain versus what remains
+                cryptographically private on the participant's device.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Public Ledger State */}
-              <div className="p-5 rounded-xl bg-slate-950/80 border border-cyan-800/40 space-y-4">
+              <div className="p-6 rounded-2xl bg-sky-50 border border-sky-200 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-cyan-300 text-sm flex items-center gap-2">
+                  <span className="font-bold text-sky-800 text-sm flex items-center gap-2">
                     <span>🌐</span> What the Blockchain & Observers See
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-[10px] text-cyan-400 font-mono">
+                  <span className="chip-pill bg-sky-200 text-sky-800 text-[10px] uppercase font-bold">
                     PUBLIC
                   </span>
                 </div>
 
                 <div className="space-y-3 font-mono text-xs">
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Organizer Public Key:</span>
-                    <span className="text-slate-300 break-all">{vaultState?.organizerKey}</span>
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Organizer Public Key:
+                    </span>
+                    <span className="text-ink break-all font-medium">{vaultState?.organizerKey}</span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Total Vault Funds:</span>
-                    <span className="text-cyan-400 font-bold">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Total Vault Funds:
+                    </span>
+                    <span className="text-sky-600 font-extrabold text-base">
                       {Number(vaultState?.totalVaultFunds ?? 0n).toLocaleString()} tDUST
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
                       Registered Allocation Commitments ({vaultState?.commitments.length}):
                     </span>
-                    <div className="max-h-28 overflow-y-auto space-y-1 mt-1 text-[11px]">
+                    <div className="max-h-32 overflow-y-auto space-y-1.5 mt-1.5 text-[11px]">
                       {vaultState?.commitments.map((c, idx) => (
-                        <div key={idx} className="text-slate-400 break-all">
+                        <div key={idx} className="text-ink-muted break-all">
                           [{idx + 1}] {c}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
                       Spent Claim Nullifiers ({vaultState?.claimedNullifiers.length}):
                     </span>
                     {vaultState?.claimedNullifiers.length === 0 ? (
-                      <span className="text-slate-600 italic text-[11px]">No claims submitted yet</span>
+                      <span className="text-ink-subtle italic text-[11px]">No claims submitted yet</span>
                     ) : (
-                      <div className="max-h-24 overflow-y-auto space-y-1 mt-1 text-[11px]">
+                      <div className="max-h-28 overflow-y-auto space-y-1 mt-1.5 text-[11px]">
                         {vaultState?.claimedNullifiers.map((n, idx) => (
-                          <div key={idx} className="text-emerald-400 break-all">
+                          <div key={idx} className="text-emerald-700 font-semibold break-all">
                             ✓ {n}
                           </div>
                         ))}
@@ -710,41 +742,49 @@ export const DistributionManager: React.FC<DistributionManagerProps> = ({
               </div>
 
               {/* Private Client Witnesses */}
-              <div className="p-5 rounded-xl bg-slate-950/80 border border-purple-800/40 space-y-4">
+              <div className="p-6 rounded-2xl bg-sky-50 border border-sky-200 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-purple-300 text-sm flex items-center gap-2">
-                    <span>🔐</span> Client-Side Private Witnesses (NEVER ON-CHAIN)
+                  <span className="font-bold text-sky-800 text-sm flex items-center gap-2">
+                    <span>🔐</span> Client-Side Private Witnesses
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-purple-500/10 text-[10px] text-purple-400 font-mono">
+                  <span className="chip-pill bg-sky-200 text-sky-800 text-[10px] uppercase font-bold">
                     CONFIDENTIAL
                   </span>
                 </div>
 
                 <div className="space-y-3 font-mono text-xs">
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Recipient Private Secrets:</span>
-                    <span className="text-purple-300">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Recipient Private Secrets:
+                    </span>
+                    <span className="text-ink font-sans text-xs">
                       Kept strictly in local user memory. Never transmitted or stored on the ledger.
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Individual Payout Amounts:</span>
-                    <span className="text-emerald-400 font-semibold">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Individual Payout Amounts:
+                    </span>
+                    <span className="text-emerald-700 font-semibold font-sans text-xs">
                       Protected by Zero-Knowledge circuit. Observers cannot tell who received 35k, 25k, or 15k.
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Blinding Factors (Salts):</span>
-                    <span className="text-slate-400">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Blinding Factors (Salts):
+                    </span>
+                    <span className="text-ink font-sans text-xs">
                       256-bit cryptographic entropy guarantees rainbow table resistance.
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">Nullifier Secret:</span>
-                    <span className="text-slate-400">
+                  <div className="p-3.5 rounded-xl bg-white border border-sky-100">
+                    <span className="text-ink-subtle block text-[11px] font-bold uppercase mb-1">
+                      Nullifier Secret:
+                    </span>
+                    <span className="text-ink font-sans text-xs">
                       Guarantees un-linkability: Public nullifier cannot be tied back to the commitment or identity.
                     </span>
                   </div>
