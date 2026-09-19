@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+managed/
+contracts/managed/
+.env
+.env.*
+!.env.example
+deployment.*.json
+deployment.*.log
+logs/
+midnight-level-db/
+.DS_Store
+*.tsbuildinfo
+npm-debug.log*
