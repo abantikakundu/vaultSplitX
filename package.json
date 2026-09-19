@@ -30,8 +30,10 @@
     "@midnight-ntwrk/midnight-js-types": "4.1.1",
     "@midnight-ntwrk/midnight-js-utils": "4.1.1",
     "@midnight-ntwrk/testkit-js": "4.1.1",
+    "lucide-react": "^1.47.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-router-dom": "^7.18.4",
     "rxjs": "7.8.2",
     "ws": "8.14.2"
   },

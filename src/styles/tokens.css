@@ -1,0 +1,77 @@
+/* ==========================================================================
+   VaultSplitX — Editorial Color-Block Design Tokens
+   ========================================================================== */
+
+:root {
+  /* Typography */
+  --font-display: 'Playfair Display', 'DM Serif Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Brand Accents */
+  --sky-300: #7DD3FC;
+  --sky-400: #38BDF8;
+  --sky-500: #0EA5E9;
+  --sky-600: #0284C7;
+
+  /* Supporting Card Colors (ONLY for tilted & preview cards) */
+  --card-pink: #F472D0;
+  --card-indigo: #6C6CFF;
+  --card-mint: #74D3A3;
+  --card-white: #FFFFFF;
+
+  /* Text on Sky 400/300 is ALWAYS near-black */
+  --text-on-sky: #0B1F33;
+
+  /* Geometry / Radii */
+  --radius-block: 0px;
+  --radius-card: 4px;
+  --radius-panel: 4px;
+  --radius-input: 4px;
+  --radius-pill: 9999px;
+
+  /* Transitions */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-base: 220ms;
+}
+
+/* Midnight (Dark) Theme - Default */
+[data-theme='midnight'],
+:root:not([data-theme='light']) {
+  color-scheme: dark;
+  --bg: #060A12;
+  --bg-elev: #0D1424;
+  --surface: #121B2E;
+  --surface-hover: #17243D;
+  --border: #1F2A44;
+  --border-focus: #38BDF8;
+  --text: #F4F8FF;
+  --muted: #93A4C0;
+  --faint: #4A5D7C;
+  --announcement-bg: #03060B;
+  --announcement-text: #E0EDFD;
+  --hard-shadow: 4px 4px 0px #03060B;
+  --hard-shadow-sm: 2px 2px 0px #03060B;
+  --hard-shadow-lg: 6px 6px 0px #03060B;
+  --card-shadow: 6px 6px 0px rgba(0, 0, 0, 0.65);
+}
+
+/* Light Theme */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #F0F9FF;
+  --bg-elev: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-hover: #F8FAFC;
+  --border: #BAE6FD;
+  --border-focus: #0284C7;
+  --text: #0B1F33;
+  --muted: #4B647C;
+  --faint: #94A3B8;
+  --announcement-bg: #0B1F33;
+  --announcement-text: #F0F9FF;
+  --hard-shadow: 4px 4px 0px #BAE6FD;
+  --hard-shadow-sm: 2px 2px 0px #BAE6FD;
+  --hard-shadow-lg: 6px 6px 0px #BAE6FD;
+  --card-shadow: 6px 6px 0px rgba(11, 31, 51, 0.18);
+}
