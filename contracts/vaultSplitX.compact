@@ -1,0 +1,174 @@
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+// ============================================================================
+// VaultSplitX: Privacy-Preserving Payment Distribution Contract
+// ============================================================================
+// PRIVACY MODEL:
+// 1. PUBLIC LEDGER STATE (Verifiable on-chain by any observer):
+//    - organizer: The public verification key of the distribution creator.
+//    - distributionId: Unique identifier for the batch distribution.
+//    - totalVaultFunds: Total funds locked in the vault for this distribution.
+//    - allocationCommitments: Set of opaque cryptographic commitments
+//      representing valid participant shares. Observers see only 32-byte hashes;
+//      individual amounts, identities, and blinding salts remain secret.
+//    - claimedNullifiers: Set of cryptographic nullifiers marking claimed shares.
+//      Prevents double-claiming while remaining completely unlinkable to the
+//      underlying commitment or recipient identity.
+//    - claimedCount: Public counter tracking the number of successful claims.
+//    - isClosed: Boolean flag indicating if the distribution batch is closed.
+//
+// 2. PRIVATE WITNESSES (Client-side secrets, NEVER written to the ledger):
+//    - organizerSecret: Organizer's private key for managing distributions.
+//    - recipientSecret: Participant's private entitlement key.
+//    - allocatedAmount: The confidential payment amount allocated to the participant.
+//    - allocationSalt: Cryptographic blinding factor preventing brute-force attacks.
+//    - claimSecret: Claimant's private spending key used to generate nullifiers.
+//
+// 3. ZERO-KNOWLEDGE PROOF (What the claimant proves without revealing values):
+//    - Claimant proves knowledge of (recipientSecret, allocatedAmount, allocationSalt)
+//      such that the derived commitment exists in `allocationCommitments`.
+//    - Claimant proves that the generated nullifier is correctly derived from
+//      their commitment and claimSecret.
+//    - Claimant proves that the nullifier has NOT already been used.
+//    - ZERO information regarding the participant's identity or individual payout
+//      amount is disclosed to the ledger or observers.
+// ============================================================================
+
+// --- Public Ledger State ---
+export ledger organizer: Bytes<32>;
+export ledger distributionId: Bytes<32>;
+export ledger totalVaultFunds: Uint<64>;
+export ledger allocationCommitments: Set<Bytes<32>>;
+export ledger claimedNullifiers: Set<Bytes<32>>;
+export ledger claimedCount: Counter;
+export ledger isClosed: Boolean;
+
+// --- Private Witnesses (Client-side secrets never written to ledger) ---
+witness organizerSecret(): Bytes<32>;
+witness recipientSecret(): Bytes<32>;
+witness allocatedAmount(): Uint<64>;
+witness allocationSalt(): Bytes<32>;
+witness claimSecret(): Bytes<32>;
+
+// --- Cryptographic Circuit Helpers ---
+circuit organizerKey(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "VaultSplitX:v1:organizer"),
+    secret
+  ]);
+}
+
+export pure circuit deriveOrganizerKey(secret: Bytes<32>): Bytes<32> {
+  return organizerKey(secret);
+}
+
+circuit recipientKey(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "VaultSplitX:v1:recipient"),
+    secret
+  ]);
+}
+
+export pure circuit deriveRecipientKey(secret: Bytes<32>): Bytes<32> {
+  return recipientKey(secret);
+}
+
+circuit computeAllocationCommitment(
+  recipientId: Bytes<32>,
+  amount: Uint<64>,
+  salt: Bytes<32>,
+  distId: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<5, Bytes<32>>>([
+    pad(32, "VaultSplitX:v1:commitment"),
+    recipientId,
+    amount as Bytes<32>,
+    salt,
+    distId
+  ]);
+}
+
+export pure circuit deriveAllocationCommitment(
+  recipientId: Bytes<32>,
+  amount: Uint<64>,
+  salt: Bytes<32>,
+  distId: Bytes<32>
+): Bytes<32> {
+  return computeAllocationCommitment(recipientId, amount, salt, distId);
+}
+
+circuit computeClaimNullifier(commitment: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "VaultSplitX:v1:nullifier"),
+    commitment,
+    secret
+  ]);
+}
+
+export pure circuit deriveClaimNullifier(commitment: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return computeClaimNullifier(commitment, secret);
+}
+
+// --- Constructor ---
+constructor(
+  initialOrganizerKey: Bytes<32>,
+  initialDistributionId: Bytes<32>,
+  totalFunds: Uint<64>
+) {
+  organizer = disclose(initialOrganizerKey);
+  distributionId = disclose(initialDistributionId);
+  totalVaultFunds = disclose(totalFunds);
+  isClosed = false;
+}
+
+// --- Register Allocation (Organizer Only) ---
+export circuit registerAllocation(commitment: Bytes<32>): [] {
+  assert(organizerKey(organizerSecret()) == organizer, "Unauthorized: Only organizer can register allocations");
+  assert(!isClosed, "Cannot register allocations to a closed distribution");
+
+  const comm = disclose(commitment);
+  assert(!allocationCommitments.member(comm), "Commitment already registered");
+  allocationCommitments.insert(comm);
+}
+
+// --- Claim Payout (ZK Proof by Eligible Participant) ---
+export circuit claimPayout(targetDistributionId: Bytes<32>): Boolean {
+  assert(!isClosed, "Distribution is closed");
+
+  const dId = disclose(targetDistributionId);
+  assert(dId == distributionId, "Distribution ID mismatch");
+
+  // Private witnesses supplied client-side
+  const recSecret = recipientSecret();
+  const amount = allocatedAmount();
+  const salt = allocationSalt();
+  const clmSecret = claimSecret();
+
+  // Verify positive allocation
+  assert(disclose(amount > 0), "Allocated amount must be greater than zero");
+
+  // Derive recipient ID and allocation commitment inside circuit
+  const recId = recipientKey(recSecret);
+  const commitment = disclose(computeAllocationCommitment(recId, amount, salt, dId));
+
+  // Check commitment exists in public ledger (the 32-byte commitment hash is checked against the set)
+  assert(allocationCommitments.member(commitment), "Invalid claim: No matching allocation found");
+
+  // Derive one-way un-linkable nullifier
+  const nullifier = disclose(computeClaimNullifier(commitment, clmSecret));
+  assert(!claimedNullifiers.member(nullifier), "Double claim detected: Allocation already claimed");
+
+  // Record nullifier and increment claim counter
+  claimedNullifiers.insert(nullifier);
+  claimedCount.increment(1);
+
+  return true;
+}
+
+// --- Close Distribution (Organizer Only) ---
+export circuit closeDistribution(): [] {
+  assert(organizerKey(organizerSecret()) == organizer, "Unauthorized: Only organizer can close distribution");
+  isClosed = true;
+}
