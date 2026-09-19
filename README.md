@@ -1,12 +1,31 @@
+<p align="center">
+  <img src="assets/logo.png" alt="VaultSplitX Logo" width="120" />
+</p>
+
 # VaultSplitX
 
 ![CI](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml/badge.svg?branch=main)
 
 > A privacy-preserving payment distribution dApp built on Midnight that enables organizations to disburse shared funds without publicly exposing individual payment amounts.
 
+## Submission Checklist
+
+- [x] **Public GitHub repository with full documentation:** [abantikakundu/vaultSplitX](https://github.com/abantikakundu/vaultSplitX) (see [docs/USAGE.md](docs/USAGE.md))
+- [x] **Live Preprod demo link + contract address:** [https://vaultsplitx.vercel.app](https://vaultsplitx.vercel.app) & [Deployed Preprod Contract (`ff4cc6a1...`)](#contract-address)
+- [x] **CI/CD badge or workflow file with passing runs:** [![CI](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml) ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+- [x] **Link to the product X profile:** [@VaultSplitX](https://x.com/VaultSplitX)
+- [x] **Demo video of the MVP:** [Watch Demo Video](https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4) (see [Demo Video](#demo-video))
+- [x] **Minimum 15 meaningful commits:** 15+ commits tracking Compact smart contracts, test suite, frontend dApp, and CI/CD
+
 ## Live Demo
 
-[Preprod demo URL — I will paste after deploying frontend]
+- **Live Preprod dApp:** [https://vaultsplitx.vercel.app](https://vaultsplitx.vercel.app)
+
+## Demo Video
+
+- **Video Walkthrough:** [https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4](https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4)
+
+<video src="https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4" controls width="100%"></video>
 
 ## Contract Address
 
@@ -145,4 +164,4 @@ See [docs/USAGE.md](docs/USAGE.md) for a comprehensive, non-technical step-by-st
 
 ## Product X Profile
 
-[PLACEHOLDER — I will add after creating the account]
+Follow VaultSplitX on X: [https://x.com/VaultSplitX](https://x.com/VaultSplitX)
