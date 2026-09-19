@@ -12,7 +12,7 @@
     "compile": "node scripts/compile-contract.mjs",
     "proof:up": "docker compose up -d --wait proof-server",
     "proof:down": "docker compose stop proof-server",
-    "deploy:preprod": "node scripts/deploy-preprod.mjs",
+    "deploy:preprod": "node --max-old-space-size=12288 --expose-gc scripts/deploy-preprod.mjs preprod",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run compile && npm test && npm run build"

@@ -10,9 +10,33 @@
 
 ## Contract Address
 
-| Network  | Address                              |
-|----------|--------------------------------------|
-| Preprod  | [ADDRESS — I will paste after deploy]|
+### Latest Deployed Contract (September 2026)
+
+| Network | Contract Address | Deployment TX / Block | Explorer | Status |
+|:---|:---|:---|:---|:---|
+| **Preprod** | `ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e` | Extrinsic `0xbaddc8...` (Block #2614473) | [**View on 1AM Preprod Explorer ↗**](https://explorer.1am.xyz/contract/ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e?network=preprod) | **LIVE & ACTIVE** |
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VaultSplitX — Compact Smart Contracts on Midnight Testnet
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Contract Source  : ./contracts/vaultSplitX.compact
+ Managed Bindings : ./contracts/managed/vaultSplitX/contract/index.js
+
+ [Preprod Deployment - September 2026]
+ Network          : Midnight Preprod (Testnet)
+ Contract Address : ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e
+ Extrinsic Hash   : 0xbaddc8360cd37c5383d72c7c4958d150a31d3d5eb951aaeac7d495d4927d9ed7
+ Block Included   : #2614473
+ Deployed At      : 2026-09-19T06:31:40.027Z
+ Explorer URL     : https://explorer.1am.xyz/contract/ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e?network=preprod
+
+ [Constructor Parameters]
+ Organizer Key    : ec09fba5287d79904b8fc6e9c697beca57ec057ee4d41e8988da557833d5fc13
+ Distribution ID  : a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a
+ Total Vault Funds: 100,000 tDUST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 ## What This Product Does
 

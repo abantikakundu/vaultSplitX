@@ -1,0 +1,11 @@
+{
+  "network": "preprod",
+  "contractAddress": "ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e",
+  "deployedAt": "2026-09-19T06:31:40.027Z",
+  "parameters": {
+    "organizerKey": "ec09fba5287d79904b8fc6e9c697beca57ec057ee4d41e8988da557833d5fc13",
+    "distributionId": "a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a",
+    "totalFunds": "100000"
+  },
+  "status": "deployed"
+}
