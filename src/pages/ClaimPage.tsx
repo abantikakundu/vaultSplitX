@@ -14,7 +14,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
-import { NETWORK_CONFIG, getExplorerTxUrl } from '../utils/config';
+import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { useWallet } from '../context/WalletContext';
 import { ContributorAllocation, generateRandomHex32 } from '../utils/contract';
 
@@ -23,6 +23,9 @@ export const ClaimPage: React.FC = () => {
   const wallet = useWallet();
   const { vaultState, claimPayout, isProving, provingStep, claimResult, claimError, clearClaimState } = useVault();
 
+  const targetContractAddress =
+    vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
+
   // Form Fields (Preserving existing field semantics)
   const [recipientSecret, setRecipientSecret] = useState('');
   const [amount, setAmount] = useState('');
@@ -30,6 +33,7 @@ export const ClaimPage: React.FC = () => {
   const [distId, setDistId] = useState('');
   const [claimSpendSecret, setClaimSpendSecret] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [selectedAllocId, setSelectedAllocId] = useState<string | null>(null);
 
   // Initialize distId
   useEffect(() => {
@@ -38,21 +42,9 @@ export const ClaimPage: React.FC = () => {
     }
   }, [vaultState?.distributionId]);
 
-  // Handle URL query parameter prefill
-  useEffect(() => {
-    const roleParam = searchParams.get('role');
-    if (roleParam && vaultState?.allocations) {
-      const match = vaultState.allocations.find(
-        (a) => a.role.toLowerCase() === roleParam.toLowerCase()
-      );
-      if (match) {
-        handleQuickFill(match);
-      }
-    }
-  }, [searchParams, vaultState?.allocations]);
-
   const handleQuickFill = (alloc: ContributorAllocation) => {
     clearClaimState();
+    setSelectedAllocId(alloc.id);
     setRecipientSecret(alloc.recipientSecret);
     setAmount(alloc.amount.toString());
     setSalt(alloc.salt);
@@ -61,6 +53,28 @@ export const ClaimPage: React.FC = () => {
       setDistId(vaultState.distributionId);
     }
   };
+
+  // Handle URL query parameter prefill or auto-select first available allocation
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    if (roleParam && vaultState?.allocations) {
+      const match = vaultState.allocations.find(
+        (a) => a.role.toLowerCase() === roleParam.toLowerCase()
+      );
+      if (match) {
+        handleQuickFill(match);
+        return;
+      }
+    }
+
+    // Default pre-select first available allocation if fields are not populated
+    if (!recipientSecret && vaultState?.allocations?.length) {
+      const firstAvailable = vaultState.allocations.find((a) => !a.claimed) || vaultState.allocations[0];
+      if (firstAvailable) {
+        handleQuickFill(firstAvailable);
+      }
+    }
+  }, [searchParams, vaultState?.allocations]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -77,8 +91,16 @@ export const ClaimPage: React.FC = () => {
     try {
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
-        const connected = await wallet.connectWallet(false);
-        activeApi = connected?.connectedApi ?? null;
+        try {
+          const connected = await wallet.connectWallet(false);
+          if (!connected?.connectedApi) {
+            throw new Error('1AM Wallet connection was not completed. Please approve connection in your 1AM wallet.');
+          }
+          activeApi = connected.connectedApi;
+        } catch (connErr) {
+          const cMsg = (connErr as Error)?.message || '1AM Wallet connection failed or was rejected.';
+          throw new Error(cMsg);
+        }
       }
       await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret, activeApi);
     } catch {
@@ -137,7 +159,34 @@ export const ClaimPage: React.FC = () => {
       </section>
 
       {/* 2. MAIN CONTENT: 3-STEP FLOW */}
-      <div className="max-w-5xl mx-auto px-6 space-y-8">
+      <div className="max-w-5xl mx-auto px-6 space-y-6">
+        {/* Target Midnight Smart Contract Banner */}
+        <div className="p-4 rounded-lg bg-surface border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-text">Target Midnight Smart Contract:</span>
+                <span className="font-mono text-emerald-400 font-semibold break-all">
+                  0x{targetContractAddress.replace(/^0x/, '')}
+                </span>
+              </div>
+              <p className="text-muted text-[11px] mt-0.5">
+                Submitting this claim prompts your connected 1AM wallet to execute the on-chain smart contract function <code className="text-emerald-300 font-mono">claimPayout</code> on Midnight Preprod.
+              </p>
+            </div>
+          </div>
+          <a
+            href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 text-emerald-400 hover:text-emerald-300 font-semibold no-underline"
+          >
+            <span>View on 1AM Explorer</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+
         {/* Step Indicator Strip */}
         <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-3">
@@ -159,29 +208,42 @@ export const ClaimPage: React.FC = () => {
         </div>
 
         {/* Quick-Test Presets from Vault */}
-        <div className="p-5 bg-surface border border-border rounded space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted block">
-            Preloaded Contributor Test Credentials (Click to Auto-Fill):
-          </span>
+        <div className="p-5 bg-surface border border-border rounded-lg space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted block">
+              Preloaded Contributor Test Credentials (Click to Auto-Fill):
+            </span>
+            <span className="text-[11px] text-muted">
+              Select an allocation to test confidential entitlement proof
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {vaultState?.allocations.map((alloc) => (
-              <button
-                key={alloc.id}
-                type="button"
-                onClick={() => handleQuickFill(alloc)}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-surface-hover hover:bg-surface border border-border hover:border-sky-400 text-text transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <span>{alloc.role}</span>
-                <span className="font-mono text-sky-400">
-                  ({Number(alloc.amount).toLocaleString()} tDUST)
-                </span>
-                {alloc.claimed && (
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase">
-                    [Claimed]
+            {vaultState?.allocations.map((alloc) => {
+              const isSelected = selectedAllocId === alloc.id;
+              return (
+                <button
+                  key={alloc.id}
+                  type="button"
+                  onClick={() => handleQuickFill(alloc)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-2 ${
+                    isSelected
+                      ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300 shadow-sm'
+                      : 'bg-surface-hover hover:bg-surface border-border hover:border-emerald-400/60 text-text'
+                  }`}
+                >
+                  {isSelected && <Check size={12} className="text-emerald-400" />}
+                  <span>{alloc.role}</span>
+                  <span className="font-mono text-sky-400">
+                    ({Number(alloc.amount).toLocaleString()} tDUST)
                   </span>
-                )}
-              </button>
-            ))}
+                  {alloc.claimed && (
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase bg-emerald-500/20 px-1.5 py-0.5 rounded">
+                      Claimed
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -283,18 +345,48 @@ export const ClaimPage: React.FC = () => {
 
           {/* Error Notice */}
           {claimError && (
-            <div className="p-5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs sm:text-sm space-y-1">
+            <div className="p-5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs sm:text-sm space-y-2">
               <div className="font-bold flex items-center gap-2">
                 <AlertCircle size={16} />
-                <span>Verification Rejection</span>
+                <span>Verification Rejection / Error</span>
               </div>
               <p className="leading-relaxed">{claimError}</p>
+              {(claimError.toLowerCase().includes('1am') ||
+                claimError.toLowerCase().includes('wallet') ||
+                claimError.toLowerCase().includes('not detected') ||
+                claimError.toLowerCase().includes('rejected')) && (
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  <a
+                    href="https://1am.xyz"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
+                  >
+                    <span>Install 1AM Wallet</span>
+                    <ExternalLink size={13} />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => wallet.connectWallet(false)}
+                    className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
+                  >
+                    Retry Connection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => wallet.connectWallet('demo')}
+                    className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
+                  >
+                    or switch to Demo Simulator
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Success Result */}
           {claimResult && (
-            <div className="p-6 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm space-y-4">
+            <div className="p-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 font-bold text-base">
                   <Check size={18} />
@@ -333,74 +425,97 @@ export const ClaimPage: React.FC = () => {
                 </div>
               </div>
 
-              {claimResult.txHash && (
-                <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-sans font-bold uppercase tracking-wider text-sky-400 block">
-                      Live Midnight Preprod Transaction
-                    </span>
-                    <span className="font-mono text-xs text-text break-all">
-                      0x{claimResult.txHash.replace(/^0x/, '')}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Contract Address Block */}
+                <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
+                  <div>
+                    <span className="text-muted text-[11px] block font-sans">Smart Contract:</span>
+                    <span className="font-mono text-text break-all">
+                      0x{targetContractAddress.replace(/^0x/, '')}
                     </span>
                   </div>
                   <a
-                    href={getExplorerTxUrl(claimResult.txHash, 'preprod')}
+                    href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
                     target="_blank"
                     rel="noreferrer"
-                    className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                    className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-emerald-400"
                   >
-                    <span>View on 1AM Explorer</span>
-                    <ExternalLink size={13} />
+                    <span>Contract on Explorer</span>
+                    <ExternalLink size={12} />
                   </a>
                 </div>
-              )}
+
+                {/* Transaction Hash Block */}
+                {claimResult.txHash && (
+                  <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
+                    <div>
+                      <span className="text-muted text-[11px] block font-sans">Transaction Hash (claimPayout):</span>
+                      <span className="font-mono text-text break-all">
+                        0x{claimResult.txHash.replace(/^0x/, '')}
+                      </span>
+                    </div>
+                    <a
+                      href={getExplorerTxUrl(claimResult.txHash, wallet.network || 'preprod')}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                    >
+                      <span>Tx on 1AM Explorer</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
                 <p className="text-xs text-emerald-300 italic">
                   Nullifier published to prevent double spending. Recipient identity and amount ({amount} tDUST) remain strictly secret.
                 </p>
-                <a
-                  href={NETWORK_CONFIG.explorerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:underline"
+                <Link
+                  to="/vault"
+                  className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5"
                 >
-                  <span>View Contract on 1AM Explorer</span>
-                  <ExternalLink size={13} />
-                </a>
+                  <span>View in Dashboard</span>
+                  <ArrowRight size={13} />
+                </Link>
               </div>
             </div>
           )}
 
           {/* CTA Row */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-3">
-            <button
-              type="submit"
-              disabled={isProving}
-              className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isProving ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Synthesizing ZK Proof...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={16} />
-                  <span>Prove Entitlement & Settle Claim</span>
-                </>
-              )}
-            </button>
+          <div className="space-y-2 pt-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                disabled={isProving}
+                className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isProving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
+                  </>
+                )}
+              </button>
 
-            {/* Cheat Simulator Button for Reviewer */}
-            <button
-              type="button"
-              onClick={handleSimulateCheat}
-              className="btn-pill btn-pill-outline py-3.5 px-4 text-xs font-semibold text-muted hover:text-text"
-              title="Tamper with allocation amount to test cryptographic ZK circuit rejection"
-            >
-              Simulate Cheat (+10k tDUST)
-            </button>
+              {/* Cheat Simulator Button for Reviewer */}
+              <button
+                type="button"
+                onClick={handleSimulateCheat}
+                className="btn-pill btn-pill-outline py-3.5 px-4 text-xs font-semibold text-muted hover:text-text cursor-pointer"
+                title="Tamper with allocation amount to test cryptographic ZK circuit rejection"
+              >
+                Simulate Cheat (+10k tDUST)
+              </button>
+            </div>
+            <p className="text-[11px] text-muted text-center sm:text-left">
+              Prompts 1AM wallet to execute <code className="text-emerald-400 font-mono">claimPayout</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code> on Midnight Preprod.
+            </p>
           </div>
         </form>
       </div>
