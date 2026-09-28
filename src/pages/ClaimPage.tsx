@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Lock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   Check,
   Copy,
@@ -22,7 +23,8 @@ import {
 import { useVault } from '../context/VaultContext';
 import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { useWallet } from '../context/WalletContext';
-import { ContributorAllocation, generateRandomHex32 } from '../utils/contract';
+import { ContributorAllocation, generateRandomHex32, hexToBytes, bytesToHex } from '../utils/contract';
+import { pureCircuits } from '../contract/index.js';
 
 export interface ClaimTemplate {
   id: string;
@@ -34,6 +36,13 @@ export interface ClaimTemplate {
   seed: string;
   salt: string;
   badge: string;
+}
+
+export interface UnifiedClaimTemplate extends ClaimTemplate {
+  commitment: string;
+  isOnChain: boolean;
+  isClaimed: boolean;
+  txHash?: string;
 }
 
 export const FEATURED_CLAIM_TEMPLATES: ClaimTemplate[] = [
@@ -72,15 +81,51 @@ export const FEATURED_CLAIM_TEMPLATES: ClaimTemplate[] = [
   },
 ];
 
+/**
+ * Computes the 32-byte allocation commitment hash using Midnight Compact pureCircuits
+ */
+function computeCommitmentHex(
+  seedStr: string,
+  amountStr: string,
+  saltStr: string,
+  distIdStr: string,
+): string | null {
+  try {
+    if (!seedStr || !amountStr || !saltStr || !distIdStr) return null;
+    const amt = BigInt(amountStr);
+    if (amt <= 0n) return null;
+    const recSecret =
+      seedStr.length === 64
+        ? hexToBytes(seedStr)
+        : hexToBytes(bytesToHex(new TextEncoder().encode(seedStr)).padEnd(64, '0').slice(0, 64));
+    const recKey = pureCircuits.deriveRecipientKey(recSecret);
+    const saltBytes = hexToBytes(saltStr);
+    const distIdBytes = hexToBytes(distIdStr);
+    const commBytes = pureCircuits.deriveAllocationCommitment(recKey, amt, saltBytes, distIdBytes);
+    return bytesToHex(commBytes);
+  } catch {
+    return null;
+  }
+}
+
 export const ClaimPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const wallet = useWallet();
-  const { vaultState, claimPayout, isProving, provingStep, claimResult, claimError, clearClaimState } = useVault();
+  const {
+    vaultState,
+    claimPayout,
+    registerAllocation,
+    isProving,
+    provingStep,
+    claimResult,
+    claimError,
+    clearClaimState,
+  } = useVault();
 
   const targetContractAddress =
     vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
 
-  // Form Fields (Preserving existing field semantics)
+  // Form Fields
   const [recipientSecret, setRecipientSecret] = useState('');
   const [amount, setAmount] = useState('');
   const [salt, setSalt] = useState('');
@@ -97,12 +142,120 @@ export const ClaimPage: React.FC = () => {
   const [templateLoadedNotice, setTemplateLoadedNotice] = useState<string | null>(null);
   const [exportedVoucherNotice, setExportedVoucherNotice] = useState(false);
 
+  // On-Chain Registration State for Selected Allocation
+  const [isRegisteringAllocation, setIsRegisteringAllocation] = useState(false);
+  const [registrationNotice, setRegistrationNotice] = useState<string | null>(null);
+
   // Initialize distId
   useEffect(() => {
     if (vaultState?.distributionId) {
       setDistId(vaultState.distributionId);
     }
   }, [vaultState?.distributionId]);
+
+  const effectiveDistId =
+    distId ||
+    vaultState?.distributionId ||
+    'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
+
+  // -------------------------------------------------------------------------
+  // Dynamic Real Templates: Harmonize on-chain allocations + presets
+  // -------------------------------------------------------------------------
+  const unifiedTemplates = useMemo<UnifiedClaimTemplate[]>(() => {
+    const list: UnifiedClaimTemplate[] = [];
+    const seenCommitments = new Set<string>();
+
+    // 1. Allocations registered in vaultState (from on-chain creation or localStorage)
+    if (vaultState?.allocations) {
+      for (const a of vaultState.allocations) {
+        const comm =
+          a.commitment ||
+          computeCommitmentHex(a.recipientSecret, a.amount.toString(), a.salt, effectiveDistId) ||
+          '';
+        if (comm) seenCommitments.add(comm.toLowerCase());
+        const isOnChain = Boolean(
+          vaultState.commitments &&
+            vaultState.commitments.some((c) => c.toLowerCase() === comm.toLowerCase()),
+        );
+        list.push({
+          id: a.id,
+          title: a.role,
+          category: a.txHash ? 'On-Chain Batch' : 'Vault Allocation',
+          role: a.role,
+          amount: a.amount.toString(),
+          description: `Confidential entitlement for ${a.role}. Private witness held client-side.`,
+          seed: a.recipientSecret,
+          salt: a.salt,
+          badge: isOnChain ? 'Verified On-Chain' : 'Batch Allocation',
+          commitment: comm,
+          isOnChain,
+          isClaimed: Boolean(a.claimed),
+          txHash: a.txHash,
+        });
+      }
+    }
+
+    // 2. Also include preset templates with computed commitments
+    for (const f of FEATURED_CLAIM_TEMPLATES) {
+      const comm = computeCommitmentHex(f.seed, f.amount, f.salt, effectiveDistId) || '';
+      if (!seenCommitments.has(comm.toLowerCase())) {
+        seenCommitments.add(comm.toLowerCase());
+        const isOnChain = Boolean(
+          vaultState?.commitments &&
+            vaultState.commitments.some((c) => c.toLowerCase() === comm.toLowerCase()),
+        );
+        list.push({
+          id: f.id,
+          title: f.title,
+          category: f.category,
+          role: f.role,
+          amount: f.amount,
+          description: f.description,
+          seed: f.seed,
+          salt: f.salt,
+          badge: f.badge,
+          commitment: comm,
+          isOnChain,
+          isClaimed: false,
+        });
+      }
+    }
+
+    // Sort: Verified on-chain (and unclaimed) first!
+    return list.sort((a, b) => {
+      if (a.isClaimed !== b.isClaimed) return a.isClaimed ? 1 : -1;
+      if (a.isOnChain !== b.isOnChain) return a.isOnChain ? -1 : 1;
+      return 0;
+    });
+  }, [vaultState?.allocations, vaultState?.commitments, effectiveDistId]);
+
+  // Current commitment derived from active form fields
+  const currentCommitmentHex = useMemo(() => {
+    return computeCommitmentHex(recipientSecret, amount, salt, effectiveDistId);
+  }, [recipientSecret, amount, salt, effectiveDistId]);
+
+  // Check if current form commitment exists in on-chain contract state
+  const isCurrentOnChain = useMemo(() => {
+    if (!currentCommitmentHex || !vaultState?.commitments) return false;
+    return vaultState.commitments.some(
+      (c) => c.toLowerCase() === currentCommitmentHex.toLowerCase(),
+    );
+  }, [currentCommitmentHex, vaultState?.commitments]);
+
+  const handleApplyTemplate = (tpl: ClaimTemplate | UnifiedClaimTemplate) => {
+    clearClaimState();
+    setSelectedAllocId(tpl.id);
+    setRecipientSecret(tpl.seed);
+    setAmount(tpl.amount);
+    setSalt(tpl.salt);
+    setClaimSpendSecret(generateRandomHex32());
+    if (vaultState?.distributionId) {
+      setDistId(vaultState.distributionId);
+    }
+    setTemplateLoadedNotice(`Template loaded: ${tpl.title} (${Number(tpl.amount).toLocaleString()} tDUST)`);
+    setShowTemplateModal(false);
+    setTimeout(() => setTemplateLoadedNotice(null), 4000);
+  };
 
   const handleQuickFill = (alloc: ContributorAllocation) => {
     clearClaimState();
@@ -116,27 +269,27 @@ export const ClaimPage: React.FC = () => {
     }
   };
 
-  // Handle URL query parameter prefill or auto-select first available allocation
+  // Auto-select on initial load: URL query parameter or first verified unclaimed template
   useEffect(() => {
     const roleParam = searchParams.get('role');
-    if (roleParam && vaultState?.allocations) {
-      const match = vaultState.allocations.find(
-        (a) => a.role.toLowerCase() === roleParam.toLowerCase()
+    if (roleParam && unifiedTemplates.length > 0) {
+      const match = unifiedTemplates.find(
+        (t) => t.role.toLowerCase() === roleParam.toLowerCase(),
       );
       if (match) {
-        handleQuickFill(match);
+        handleApplyTemplate(match);
         return;
       }
     }
 
-    // Default pre-select first available allocation if fields are not populated
-    if (!recipientSecret && vaultState?.allocations?.length) {
-      const firstAvailable = vaultState.allocations.find((a) => !a.claimed) || vaultState.allocations[0];
+    if (!recipientSecret && unifiedTemplates.length > 0) {
+      const firstAvailable =
+        unifiedTemplates.find((t) => t.isOnChain && !t.isClaimed) || unifiedTemplates[0];
       if (firstAvailable) {
-        handleQuickFill(firstAvailable);
+        handleApplyTemplate(firstAvailable);
       }
     }
-  }, [searchParams, vaultState?.allocations]);
+  }, [searchParams, unifiedTemplates]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -144,19 +297,46 @@ export const ClaimPage: React.FC = () => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleApplyTemplate = (tpl: ClaimTemplate) => {
-    clearClaimState();
-    setSelectedAllocId(tpl.id);
-    setRecipientSecret(tpl.seed);
-    setAmount(tpl.amount);
-    setSalt(tpl.salt);
-    setClaimSpendSecret(generateRandomHex32());
-    if (vaultState?.distributionId) {
-      setDistId(vaultState.distributionId);
+  // -------------------------------------------------------------------------
+  // 1-Click Register Allocation on Midnight Preprod (1AM Wallet)
+  // -------------------------------------------------------------------------
+  const handleRegisterCurrentAllocation = async () => {
+    if (!recipientSecret || !amount || BigInt(amount) <= 0n || !salt) {
+      alert('Please provide valid recipient secret, amount, and salt to register.');
+      return;
     }
-    setTemplateLoadedNotice(`Template loaded: ${tpl.title} (${Number(tpl.amount).toLocaleString()} tDUST)`);
-    setShowTemplateModal(false);
-    setTimeout(() => setTemplateLoadedNotice(null), 4000);
+
+    setIsRegisteringAllocation(true);
+    clearClaimState();
+
+    try {
+      let activeApi = wallet.connectedApi;
+      if (!activeApi || wallet.isSimulated) {
+        const connected = await wallet.connectWallet(false);
+        activeApi = connected?.connectedApi ?? null;
+      }
+
+      const activeRole =
+        unifiedTemplates.find((t) => t.id === selectedAllocId)?.role ||
+        'Confidential Contributor';
+
+      const res = await registerAllocation(
+        activeRole,
+        BigInt(amount),
+        recipientSecret,
+        activeApi,
+        salt,
+      );
+
+      setRegistrationNotice(
+        `Allocation registered on Midnight Preprod! Commitment: 0x${res.commitment.slice(0, 10)}... (Tx: 0x${res.txHash ? res.txHash.slice(0, 10) : ''}...). Ready to claim!`,
+      );
+      setTimeout(() => setRegistrationNotice(null), 8000);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to register allocation on-chain.');
+    } finally {
+      setIsRegisteringAllocation(false);
+    }
   };
 
   const handleParseVoucher = () => {
@@ -192,14 +372,16 @@ export const ClaimPage: React.FC = () => {
   };
 
   const handleLoadSampleVoucherIntoModal = () => {
+    // Pick the first available on-chain template if available, else first preset
+    const pick = unifiedTemplates.find((t) => t.isOnChain && !t.isClaimed) || unifiedTemplates[0];
     const sample = {
       network: wallet.network || 'preprod',
       contractAddress: targetContractAddress,
       distributionId: distId || vaultState?.distributionId || 'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a',
-      role: 'Lead ZK Protocol Architect',
-      amount: '40000',
-      recipientSecret: '0101010101010101010101010101010101010101010101010101010101010101',
-      salt: '1111111111111111111111111111111111111111111111111111111111111111',
+      role: pick?.role || 'Lead ZK Protocol Architect',
+      amount: pick?.amount || '40000',
+      recipientSecret: pick?.seed || '0101010101010101010101010101010101010101010101010101010101010101',
+      salt: pick?.salt || '1111111111111111111111111111111111111111111111111111111111111111',
       instructions: 'Paste this voucher into VaultSplitX to prove entitlement via ZK witness.',
     };
     setPastedVoucherText(JSON.stringify(sample, null, 2));
@@ -211,10 +393,11 @@ export const ClaimPage: React.FC = () => {
       network: wallet.network || 'preprod',
       contractAddress: targetContractAddress,
       distributionId: distId || vaultState?.distributionId || '',
-      role: FEATURED_CLAIM_TEMPLATES.find((t) => t.id === selectedAllocId)?.role || 'Confidential Contributor',
+      role: unifiedTemplates.find((t) => t.id === selectedAllocId)?.role || 'Confidential Contributor',
       amount: amount || '0',
       recipientSecret,
       salt,
+      commitment: currentCommitmentHex ? `0x${currentCommitmentHex}` : undefined,
       instructions: 'Use this voucher on the VaultSplitX Claim page to synthesize a zero-knowledge claim proof.',
     };
 
@@ -226,6 +409,19 @@ export const ClaimPage: React.FC = () => {
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || BigInt(amount) <= 0n) {
+      return;
+    }
+
+    // Safety verification before invoking 1AM wallet: ensure commitment exists in on-chain set
+    if (
+      currentCommitmentHex &&
+      vaultState?.commitments &&
+      !vaultState.commitments.some((c) => c.toLowerCase() === currentCommitmentHex.toLowerCase())
+    ) {
+      clearClaimState();
+      alert(
+        `On-Chain Pre-Check Notice:\n\nThe commitment 0x${currentCommitmentHex.slice(0, 12)}... is not registered in Midnight smart contract 0x${targetContractAddress.slice(0, 8)}... on Preprod.\n\nSubmitting this claim will fail the circuit assert ("No matching allocation found"). Please click "Register to Contract First (1AM Wallet)" first so the smart contract assertion can pass.`
+      );
       return;
     }
 
@@ -366,6 +562,24 @@ export const ClaimPage: React.FC = () => {
           </div>
         )}
 
+        {/* Registration Success Banner */}
+        {registrationNotice && (
+          <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/40 rounded-lg text-emerald-300 text-xs flex items-center justify-between shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span className="font-semibold">{registrationNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRegistrationNotice(null)}
+              className="text-emerald-400 hover:text-white cursor-pointer p-0.5"
+              aria-label="Dismiss notice"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Claim Templates & Voucher Prompt Section */}
         <div className="sharp-card p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
@@ -373,11 +587,11 @@ export const ClaimPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-emerald-400" />
                 <h3 className="font-display text-base font-bold text-text">
-                  Claim Templates & Vouchers
+                  Claim Templates & On-Chain Allocations
                 </h3>
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Select a preconfigured entitlement scenario or prompt a private JSON voucher.
+                Select an allocation verified on Midnight Preprod, or paste a private JSON voucher.
               </p>
             </div>
 
@@ -407,14 +621,12 @@ export const ClaimPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 3 Featured Template Cards Grid */}
+          {/* Unified Templates Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {FEATURED_CLAIM_TEMPLATES.map((tpl) => {
-              const isSelected = selectedAllocId === tpl.id;
-              const matchingAlloc = vaultState?.allocations.find(
-                (a) => a.recipientSecret === tpl.seed || a.role.toLowerCase() === tpl.role.toLowerCase()
-              );
-              const isClaimed = matchingAlloc?.claimed ?? false;
+            {unifiedTemplates.slice(0, 6).map((tpl) => {
+              const isSelected =
+                selectedAllocId === tpl.id ||
+                (recipientSecret === tpl.seed && amount === tpl.amount);
 
               return (
                 <div
@@ -427,22 +639,23 @@ export const ClaimPage: React.FC = () => {
                   }`}
                 >
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-hover border border-border text-muted">
                         {tpl.badge}
                       </span>
-                      {isClaimed ? (
+                      {tpl.isClaimed ? (
                         <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20">
                           Claimed
                         </span>
-                      ) : isSelected ? (
+                      ) : tpl.isOnChain ? (
                         <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                           <Check size={10} />
-                          Active
+                          Verified On-Chain
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          Ready
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                          <AlertTriangle size={10} />
+                          Not On-Chain
                         </span>
                       )}
                     </div>
@@ -462,11 +675,20 @@ export const ClaimPage: React.FC = () => {
                   </div>
 
                   <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
-                    <span className="font-mono text-muted text-[10px]">
-                      seed: {tpl.seed.slice(0, 8)}...
+                    <span
+                      className="font-mono text-muted text-[10px] truncate max-w-[130px]"
+                      title={tpl.commitment ? `Commitment: 0x${tpl.commitment}` : undefined}
+                    >
+                      {tpl.commitment
+                        ? `comm: 0x${tpl.commitment.slice(0, 6)}...`
+                        : `seed: ${tpl.seed.slice(0, 6)}...`}
                     </span>
-                    <span className={`font-semibold ${isSelected ? 'text-emerald-400' : 'text-muted group-hover:text-text'}`}>
-                      {isSelected ? 'Selected ✓' : 'Load Template →'}
+                    <span
+                      className={`font-semibold flex items-center gap-1 ${
+                        isSelected ? 'text-emerald-400' : 'text-muted'
+                      }`}
+                    >
+                      {isSelected ? 'Selected ✓' : tpl.isOnChain ? 'Load & Prove →' : 'Load Template →'}
                     </span>
                   </div>
                 </div>
@@ -474,45 +696,125 @@ export const ClaimPage: React.FC = () => {
             })}
           </div>
 
-          {/* Quick Access Chips for Other Batch Allocations */}
-          {vaultState?.allocations && vaultState.allocations.length > 3 && (
+          {/* Additional Quick Access Chips if there are more templates */}
+          {unifiedTemplates.length > 6 && (
             <div className="pt-2 border-t border-border/60 space-y-2">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">
                 Additional Vault Batch Allocations:
               </span>
               <div className="flex flex-wrap gap-2">
-                {vaultState.allocations
-                  .filter((a) => !FEATURED_CLAIM_TEMPLATES.some((t) => t.seed === a.recipientSecret))
-                  .map((alloc) => {
-                    const isSelected = selectedAllocId === alloc.id;
-                    return (
-                      <button
-                        key={alloc.id}
-                        type="button"
-                        onClick={() => handleQuickFill(alloc)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300'
-                            : 'bg-surface-hover hover:bg-surface border-border text-text'
-                        }`}
-                      >
-                        {isSelected && <Check size={11} className="text-emerald-400" />}
-                        <span>{alloc.role}</span>
-                        <span className="font-mono text-sky-400">
-                          ({Number(alloc.amount).toLocaleString()} tDUST)
+                {unifiedTemplates.slice(6).map((tpl) => {
+                  const isSelected = selectedAllocId === tpl.id;
+                  return (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300'
+                          : 'bg-surface-hover hover:bg-surface border-border text-text'
+                      }`}
+                    >
+                      {isSelected && <Check size={11} className="text-emerald-400" />}
+                      <span>{tpl.role}</span>
+                      <span className="font-mono text-sky-400">
+                        ({Number(tpl.amount).toLocaleString()} tDUST)
+                      </span>
+                      {tpl.isOnChain && (
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase">
+                          [On-Chain]
                         </span>
-                        {alloc.claimed && (
-                          <span className="text-[9px] text-emerald-400 font-bold uppercase">
-                            [Claimed]
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                      )}
+                      {tpl.isClaimed && (
+                        <span className="text-[9px] text-rose-400 font-bold uppercase">
+                          [Claimed]
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
+
+        {/* Real-time Commitment Verification Banner */}
+        {currentCommitmentHex &&
+          (isCurrentOnChain ? (
+            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm animate-fade-in">
+              <div className="flex items-start sm:items-center gap-3">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-text">On-Chain Commitment Verified</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Active in Contract Set
+                    </span>
+                  </div>
+                  <p className="text-muted text-[11px] mt-0.5">
+                    Leaf commitment{' '}
+                    <code className="text-emerald-300 font-mono">
+                      0x{currentCommitmentHex.slice(0, 16)}...{currentCommitmentHex.slice(-8)}
+                    </code>{' '}
+                    exists in smart contract{' '}
+                    <code className="text-muted font-mono">
+                      0x{targetContractAddress.slice(0, 8)}...
+                    </code>
+                    . Zero-knowledge proof assertion is guaranteed to pass.
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2">
+                <span className="text-[11px] text-emerald-400 font-bold hidden md:inline">
+                  Ready for 1AM Wallet
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm animate-fade-in">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-text">Allocation Not Yet Registered On-Chain</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Registration Needed
+                    </span>
+                  </div>
+                  <p className="text-muted text-[11px] mt-0.5">
+                    Commitment{' '}
+                    <code className="text-amber-300 font-mono">
+                      0x{currentCommitmentHex.slice(0, 14)}...
+                    </code>{' '}
+                    is not recorded on Midnight contract{' '}
+                    <code className="text-muted font-mono">
+                      0x{targetContractAddress.slice(0, 8)}...
+                    </code>
+                    . Register it first using 1AM wallet before claiming so the smart contract assertion passes!
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleRegisterCurrentAllocation}
+                disabled={isRegisteringAllocation || isProving}
+                className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 hover:bg-amber-500/15 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isRegisteringAllocation ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-amber-400" />
+                    <span>Registering on Midnight...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={14} className="text-amber-400" />
+                    <span>Register to Contract (1AM Wallet)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          ))}
 
         {/* Claim Form */}
         <form onSubmit={handleClaim} className="sharp-card p-7 sm:p-8 space-y-6">
@@ -752,23 +1054,44 @@ export const ClaimPage: React.FC = () => {
           {/* CTA Row */}
           <div className="space-y-2 pt-3">
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="submit"
-                disabled={isProving}
-                className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {isProving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck size={16} />
-                    <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
-                  </>
-                )}
-              </button>
+              {isCurrentOnChain ? (
+                <button
+                  type="submit"
+                  disabled={isProving || isRegisteringAllocation}
+                  className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isProving ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRegisterCurrentAllocation}
+                  disabled={isProving || isRegisteringAllocation}
+                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm"
+                >
+                  {isRegisteringAllocation ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-ink" />
+                      <span>Registering Allocation on Midnight Preprod...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      <span>Register Allocation on Contract First (1AM Wallet)</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               {/* Cheat Simulator Button for Reviewer */}
               <button
@@ -781,7 +1104,15 @@ export const ClaimPage: React.FC = () => {
               </button>
             </div>
             <p className="text-[11px] text-muted text-center sm:text-left">
-              Prompts 1AM wallet to execute <code className="text-emerald-400 font-mono">claimPayout</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code> on Midnight Preprod.
+              {isCurrentOnChain ? (
+                <>
+                  Prompts 1AM wallet to execute <code className="text-emerald-400 font-mono">claimPayout</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code> on Midnight Preprod.
+                </>
+              ) : (
+                <>
+                  Prompts 1AM wallet to execute <code className="text-amber-400 font-mono">registerAllocation</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code> so your entitlement exists on-chain before claiming.
+                </>
+              )}
             </p>
           </div>
         </form>
@@ -822,7 +1153,7 @@ export const ClaimPage: React.FC = () => {
                     : 'text-muted hover:text-text'
                 }`}
               >
-                Preset Scenarios (3)
+                Preset & Batch Scenarios ({unifiedTemplates.length})
               </button>
               <button
                 type="button"
@@ -840,14 +1171,10 @@ export const ClaimPage: React.FC = () => {
             {templateTab === 'featured' ? (
               <div className="space-y-3">
                 <p className="text-xs text-muted leading-relaxed">
-                  Select a preconfigured Midnight contributor credential set to populate your private witness, amount, and blinding salt into the claim circuit:
+                  Select a contributor credential set to populate your private witness, amount, and blinding salt into the claim circuit:
                 </p>
                 <div className="space-y-2.5">
-                  {FEATURED_CLAIM_TEMPLATES.map((tpl) => {
-                    const isClaimed = vaultState?.allocations.find(
-                      (a) => a.recipientSecret === tpl.seed || a.role.toLowerCase() === tpl.role.toLowerCase()
-                    )?.claimed;
-
+                  {unifiedTemplates.map((tpl) => {
                     return (
                       <div
                         key={tpl.id}
@@ -856,12 +1183,20 @@ export const ClaimPage: React.FC = () => {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-text text-sm">{tpl.title}</span>
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-hover border border-border text-muted">
                               {tpl.badge}
                             </span>
-                            {isClaimed && (
+                            {tpl.isClaimed ? (
                               <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20">
                                 Claimed
+                              </span>
+                            ) : tpl.isOnChain ? (
+                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                ✓ Verified On-Chain
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                Not On-Chain
                               </span>
                             )}
                           </div>
@@ -869,7 +1204,9 @@ export const ClaimPage: React.FC = () => {
                           <div className="font-mono text-[11px] text-muted flex items-center gap-2 pt-0.5">
                             <span>Witness: {tpl.seed.slice(0, 10)}...</span>
                             <span>•</span>
-                            <span className="text-sky-400 font-bold">{Number(tpl.amount).toLocaleString()} tDUST</span>
+                            <span className="text-sky-400 font-bold">
+                              {Number(tpl.amount).toLocaleString()} tDUST
+                            </span>
                           </div>
                         </div>
 

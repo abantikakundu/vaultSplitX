@@ -36,6 +36,7 @@ interface VaultContextValue {
     amount: bigint,
     seed?: string,
     overrideApi?: ConnectedAPI | null,
+    customSalt?: string,
   ) => Promise<{ txHash?: string; commitment: string }>;
   createDistributionBatch: (
     title: string,
@@ -127,7 +128,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             organizerKey: live.organizerKey || prev.organizerKey,
             distributionId: live.distributionId || prev.distributionId,
             totalVaultFunds: live.totalVaultFunds,
-            commitments: Array.from(new Set([...prev.commitments, ...live.commitments])),
+            commitments: live.commitments,
             claimedNullifiers: live.claimedNullifiers,
             claimedCount: live.claimedCount,
             isClosed: live.isClosed,
@@ -146,15 +147,17 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     createDemoVaultState()
       .then(async (initialState) => {
-        // Load any user-saved allocations from localStorage
+        // Load any user-saved allocations from localStorage (real on-chain registrations take precedence)
         const saved = getPersistedAllocations(initialState.contractAddress);
-        const mergedAllocations = [...initialState.allocations];
-        for (const s of saved) {
-          if (!mergedAllocations.some((m) => m.commitment === s.commitment)) {
-            mergedAllocations.push(s);
+        if (saved && saved.length > 0) {
+          const merged = [...saved];
+          for (const demo of initialState.allocations) {
+            if (!merged.some((m) => m.commitment === demo.commitment || m.role.toLowerCase() === demo.role.toLowerCase())) {
+              merged.push(demo);
+            }
           }
+          initialState.allocations = merged;
         }
-        initialState.allocations = mergedAllocations;
 
         // Try syncing from Midnight indexer
         try {
@@ -164,7 +167,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             initialState.organizerKey = live.organizerKey || initialState.organizerKey;
             initialState.distributionId = live.distributionId || initialState.distributionId;
             initialState.totalVaultFunds = live.totalVaultFunds;
-            initialState.commitments = Array.from(new Set([...initialState.commitments, ...live.commitments]));
+            initialState.commitments = live.commitments;
             initialState.claimedNullifiers = live.claimedNullifiers;
             initialState.claimedCount = live.claimedCount;
             initialState.isClosed = live.isClosed;
@@ -198,6 +201,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     amount: bigint,
     seed?: string,
     overrideApi?: ConnectedAPI | null,
+    customSalt?: string,
   ): Promise<{ txHash?: string; commitment: string }> => {
     if (!vaultState) throw new Error('Vault state is not loaded');
     if (vaultState.isClosed) throw new Error('Cannot register allocations to a closed distribution');
@@ -210,7 +214,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setProvingStep('Computing recipient cryptographic commitment...');
       const recSecret = seed ? hexToBytes(seed.length === 64 ? seed : bytesToHex(new TextEncoder().encode(seed)).padEnd(64, '0').slice(0, 64)) : hexToBytes(generateRandomHex32());
       const recKeyBytes = pureCircuits.deriveRecipientKey(recSecret);
-      const saltBytes = hexToBytes(generateRandomHex32());
+      const saltBytes = customSalt ? hexToBytes(customSalt) : hexToBytes(generateRandomHex32());
       const distIdBytes = hexToBytes(vaultState.distributionId);
 
       const commBytes = pureCircuits.deriveAllocationCommitment(
@@ -278,11 +282,12 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setVaultState((prev) => {
         if (!prev) return prev;
+        const filtered = prev.allocations.filter((a) => a.commitment !== commHex);
         const updated = {
           ...prev,
           totalVaultFunds: prev.totalVaultFunds + amount,
-          commitments: [...prev.commitments, commHex],
-          allocations: [...prev.allocations, newAlloc],
+          commitments: Array.from(new Set([...prev.commitments, commHex])),
+          allocations: [newAlloc, ...filtered],
         };
         savePersistedAllocations(prev.contractAddress, updated.allocations);
         return updated;

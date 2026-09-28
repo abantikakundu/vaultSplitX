@@ -178,7 +178,7 @@ export async function createDemoVaultState(): Promise<DistributionVaultState> {
     distributionId: distIdHex,
     title: 'Contributor Treasury Q4 Disbursement',
     totalVaultFunds: 100_000n,
-    commitments,
+    commitments: [],
     claimedNullifiers: [],
     claimedCount: 0,
     isClosed: false,
