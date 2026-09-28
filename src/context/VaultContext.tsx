@@ -19,7 +19,12 @@ import {
   waitForTxConfirmation,
 } from '../midnight/contract';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
-import { getOrganizerSecret, saveOrganizerSecret } from '../midnight/crypto';
+import {
+  getOrganizerSecret,
+  saveOrganizerSecret,
+  removeOrganizerSecret,
+  validateOrganizerSecret,
+} from '../midnight/crypto';
 
 interface VaultContextValue {
   vaultState: DistributionVaultState | null;
@@ -47,6 +52,7 @@ interface VaultContextValue {
     overrideApi?: ConnectedAPI | null,
   ) => Promise<ClaimVerificationResult>;
   closeDistribution: (overrideApi?: ConnectedAPI | null) => Promise<{ txHash?: string }>;
+  resetOrganizerSecret: (customSecret?: string) => void;
   isProving: boolean;
   provingStep: string;
   claimResult: ClaimVerificationResult | null;
@@ -167,6 +173,16 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.warn('Initial indexer query:', err);
         }
 
+        // Ensure valid organizer secret is in localStorage for this contract
+        try {
+          const netConfig = getNetworkConfig('preprod');
+          const expectedKey = initialState.organizerKey || netConfig.defaultOrganizer.organizerKey;
+          const currentStoredSecret = getOrganizerSecret(initialState.contractAddress, expectedKey);
+          if (!currentStoredSecret && netConfig.defaultOrganizer.organizerSecretHex) {
+            saveOrganizerSecret(initialState.contractAddress, netConfig.defaultOrganizer.organizerSecretHex);
+          }
+        } catch {}
+
         setVaultState(initialState);
       })
       .finally(() => {
@@ -211,8 +227,11 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // If real 1AM wallet is connected, execute real on-chain transaction!
       if (activeApi) {
         const netConfig = getNetworkConfig(wallet.network || 'preprod');
+        const expectedOrganizerKey =
+          vaultState.organizerKey ||
+          netConfig.defaultOrganizer.organizerKey;
         const organizerSecretHex =
-          getOrganizerSecret(vaultState.contractAddress) ||
+          getOrganizerSecret(vaultState.contractAddress, expectedOrganizerKey) ||
           netConfig.defaultOrganizer.organizerSecretHex;
 
         setProvingStep('Prompting 1AM wallet: Synthesizing registerAllocation ZK proof...');
@@ -418,8 +437,11 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (activeApi) {
         const netConfig = getNetworkConfig(wallet.network || 'preprod');
+        const expectedOrganizerKey =
+          vaultState.organizerKey ||
+          netConfig.defaultOrganizer.organizerKey;
         const organizerSecretHex =
-          getOrganizerSecret(vaultState.contractAddress) ||
+          getOrganizerSecret(vaultState.contractAddress, expectedOrganizerKey) ||
           netConfig.defaultOrganizer.organizerSecretHex;
 
         setProvingStep('Submitting closeDistribution transaction to Midnight via 1AM wallet...');
@@ -473,13 +495,15 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
       const distIdBytes = hexToBytes(distIdHex);
 
-      const organizerSecretHex =
-        getOrganizerSecret(targetContract) ||
-        netConfig.defaultOrganizer.organizerSecretHex;
-
-      const organizerKeyHex =
+      const expectedOrganizerKey =
         vaultState?.organizerKey ||
         netConfig.defaultOrganizer.organizerKey;
+
+      const organizerSecretHex =
+        getOrganizerSecret(targetContract, expectedOrganizerKey) ||
+        netConfig.defaultOrganizer.organizerSecretHex;
+
+      const organizerKeyHex = expectedOrganizerKey;
 
       const newAllocations: ContributorAllocation[] = [];
       const newCommitments: string[] = [];
@@ -576,6 +600,23 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const resetOrganizerSecret = useCallback(
+    (customSecret?: string) => {
+      const netConfig = getNetworkConfig(wallet.network || 'preprod');
+      const targetAddress = vaultState?.contractAddress || netConfig.contractAddress;
+      if (customSecret) {
+        saveOrganizerSecret(targetAddress, customSecret);
+      } else {
+        removeOrganizerSecret(targetAddress);
+        removeOrganizerSecret();
+        if (netConfig.defaultOrganizer.organizerSecretHex) {
+          saveOrganizerSecret(targetAddress, netConfig.defaultOrganizer.organizerSecretHex);
+        }
+      }
+    },
+    [vaultState?.contractAddress, wallet.network],
+  );
+
   return (
     <VaultContext.Provider
       value={{
@@ -587,6 +628,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         createDistributionBatch,
         claimPayout,
         closeDistribution,
+        resetOrganizerSecret,
         isProving,
         provingStep,
         claimResult,

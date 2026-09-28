@@ -97,21 +97,80 @@ const STORAGE_KEY_ORGANIZER_SECRETS = 'vaultsplitx_organizer_secrets';
 
 export function saveOrganizerSecret(contractAddress: string, secretHex: string): void {
   try {
+    const cleanAddr = contractAddress.toLowerCase().replace(/^0x/, '');
+    const cleanSecret = secretHex.toLowerCase().replace(/^0x/, '');
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_ORGANIZER_SECRETS) ?? '{}');
-    existing[contractAddress.toLowerCase()] = secretHex.toLowerCase();
+    existing[cleanAddr] = cleanSecret;
+    existing[`0x${cleanAddr}`] = cleanSecret;
     localStorage.setItem(STORAGE_KEY_ORGANIZER_SECRETS, JSON.stringify(existing));
   } catch (err) {
     console.warn('Failed to save organizer secret to localStorage:', err);
   }
 }
 
-export function getOrganizerSecret(contractAddress?: string): string | null {
+export function removeOrganizerSecret(contractAddress?: string): void {
   try {
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_ORGANIZER_SECRETS) ?? '{}');
-    if (contractAddress && existing[contractAddress.toLowerCase()]) {
-      return existing[contractAddress.toLowerCase()];
+    if (contractAddress) {
+      const cleanAddr = contractAddress.toLowerCase().replace(/^0x/, '');
+      delete existing[cleanAddr];
+      delete existing[`0x${cleanAddr}`];
+    } else {
+      delete existing['default'];
     }
-    return existing['default'] || null;
+    localStorage.setItem(STORAGE_KEY_ORGANIZER_SECRETS, JSON.stringify(existing));
+  } catch (err) {
+    console.warn('Failed to remove organizer secret from localStorage:', err);
+  }
+}
+
+export function validateOrganizerSecret(secretHex: string, expectedKeyHex: string): boolean {
+  try {
+    const cleanSecret = secretHex.toLowerCase().replace(/^0x/, '');
+    const cleanKey = expectedKeyHex.toLowerCase().replace(/^0x/, '');
+    if (!/^[0-9a-fA-F]{64}$/.test(cleanSecret) || !/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+      return false;
+    }
+    const derivedKey = bytesToHex(pureCircuits.deriveOrganizerKey(hexToBytes(cleanSecret))).toLowerCase();
+    return derivedKey === cleanKey;
+  } catch {
+    return false;
+  }
+}
+
+export function getOrganizerSecret(contractAddress?: string, expectedOrganizerKey?: string): string | null {
+  try {
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_ORGANIZER_SECRETS) ?? '{}');
+    const cleanAddr = contractAddress?.toLowerCase().replace(/^0x/, '');
+    const cleanExpectedKey = expectedOrganizerKey?.toLowerCase().replace(/^0x/, '');
+
+    const candidate =
+      (cleanAddr && (existing[cleanAddr] || existing[`0x${cleanAddr}`])) ||
+      existing['default'] ||
+      null;
+
+    if (!candidate) return null;
+
+    if (cleanExpectedKey && /^[0-9a-fA-F]{64}$/.test(candidate)) {
+      try {
+        const derived = bytesToHex(pureCircuits.deriveOrganizerKey(hexToBytes(candidate))).toLowerCase();
+        if (derived !== cleanExpectedKey) {
+          console.warn(
+            `[VaultSplitX] Stored organizer secret for ${contractAddress} derives to ${derived}, but expected ${cleanExpectedKey}. Discarding invalid secret.`,
+          );
+          if (cleanAddr) {
+            delete existing[cleanAddr];
+            delete existing[`0x${cleanAddr}`];
+            localStorage.setItem(STORAGE_KEY_ORGANIZER_SECRETS, JSON.stringify(existing));
+          }
+          return null;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return candidate;
   } catch {
     return null;
   }

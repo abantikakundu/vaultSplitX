@@ -39,7 +39,7 @@ import {
 } from '@midnight-ntwrk/ledger-v8';
 import type { MidnightNetwork } from './config';
 import { getNetworkConfig } from './config';
-import { hexToBytes, bytesToHex, sha256Hex, deriveClaimNullifier } from './crypto';
+import { hexToBytes, bytesToHex, sha256Hex, deriveClaimNullifier, saveOrganizerSecret } from './crypto';
 
 // ---------------------------------------------------------------------------
 // Decoded Types
@@ -289,6 +289,54 @@ async function prepareCircuitContext(
 
   const stateBytes = fromHex(stateHex);
   const contractStateObj = ContractState.deserialize(stateBytes);
+
+  // Validate organizer witness if present and non-zero
+  try {
+    const decodedLedger = ledger(contractStateObj.data);
+    if (decodedLedger.organizer && decodedLedger.organizer.length === 32) {
+      const onChainKey = toHex(decodedLedger.organizer).toLowerCase();
+      const [_, suppliedSecret] = witnesses.organizerSecret({ contractAddress, ledger: decodedLedger, privateState: {} } as any);
+      const isAllZeros = suppliedSecret && Array.from(suppliedSecret).every((b) => b === 0);
+
+      if (suppliedSecret && suppliedSecret.length === 32 && !isAllZeros) {
+        const derivedKey = toHex(pureCircuits.deriveOrganizerKey(suppliedSecret)).toLowerCase();
+        if (derivedKey !== onChainKey) {
+          console.warn(
+            `[VaultSplitX] Supplied organizer secret key derived to 0x${derivedKey.slice(0, 8)}..., but on-chain organizer key is 0x${onChainKey.slice(0, 8)}... Checking fallback default...`,
+          );
+          const defaultSecretHex = netConfig.defaultOrganizer.organizerSecretHex;
+          if (defaultSecretHex) {
+            const defaultSecretBytes = fromHex(defaultSecretHex);
+            const defaultDerivedKey = toHex(pureCircuits.deriveOrganizerKey(defaultSecretBytes)).toLowerCase();
+            if (defaultDerivedKey === onChainKey) {
+              console.info(
+                `[VaultSplitX] Successfully auto-recovered organizer secret using network default for contract ${contractAddress}.`,
+              );
+              witnesses.organizerSecret = (ctx) => [ctx.privateState, defaultSecretBytes];
+              saveOrganizerSecret(contractAddress, defaultSecretHex);
+            } else {
+              throw new Error(
+                `Unauthorized: Only organizer can execute this administrative operation. ` +
+                `The on-chain organizer key for contract 0x${contractAddress.slice(0, 8)}... is 0x${onChainKey.slice(0, 10)}..., ` +
+                `but the supplied administrative secret key derived to 0x${derivedKey.slice(0, 10)}...`,
+              );
+            }
+          } else {
+            throw new Error(
+              `Unauthorized: Only organizer can execute this administrative operation. ` +
+              `The on-chain organizer key for contract 0x${contractAddress.slice(0, 8)}... is 0x${onChainKey.slice(0, 10)}..., ` +
+              `but the supplied administrative secret key derived to 0x${derivedKey.slice(0, 10)}...`,
+            );
+          }
+        }
+      }
+    }
+  } catch (checkErr) {
+    if ((checkErr as Error)?.message?.startsWith('Unauthorized:')) {
+      throw checkErr;
+    }
+    console.warn('[VaultSplitX] Could not verify organizer key before circuit execution:', checkErr);
+  }
 
   let coinPublicKey = '00'.repeat(32);
   try {

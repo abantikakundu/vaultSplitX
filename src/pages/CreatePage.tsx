@@ -14,6 +14,7 @@ import {
   ArrowRight,
   EyeOff,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
@@ -30,7 +31,7 @@ interface RecipientRow {
 
 export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { createDistributionBatch, vaultState, isProving, provingStep } = useVault();
+  const { createDistributionBatch, vaultState, isProving, provingStep, resetOrganizerSecret } = useVault();
   const wallet = useWallet();
   const targetContractAddress =
     vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
@@ -251,31 +252,54 @@ export const CreatePage: React.FC = () => {
 
       {/* Main Two-Column Body */}
       <div className="max-w-7xl mx-auto px-6 space-y-6">
-        {/* Target Midnight Smart Contract Banner */}
-        <div className="p-4 rounded-lg bg-surface border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <div>
+        {/* Target Midnight Smart Contract & Organizer Authority Banner */}
+        <div className="p-4 rounded-lg bg-surface border border-sky-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0 mt-1" />
+            <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-text">Target Midnight Smart Contract:</span>
                 <span className="font-mono text-sky-400 font-semibold break-all">
                   0x{targetContractAddress.replace(/^0x/, '')}
                 </span>
               </div>
-              <p className="text-muted text-[11px] mt-0.5">
-                Submitting this distribution prompts your connected 1AM wallet to execute the on-chain smart contract function <code className="text-sky-300 font-mono">registerAllocation</code>.
+              <div className="flex items-center gap-2 flex-wrap text-muted text-[11px]">
+                <span>Organizer Key:</span>
+                <span className="font-mono text-emerald-400 font-semibold">
+                  0x{(vaultState?.organizerKey || 'ec09fba5287d79904b8fc6e9c697beca57ec057ee4d41e8988da557833d5fc13').slice(0, 10)}...
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">
+                  <ShieldCheck size={11} /> Verified Organizer
+                </span>
+              </div>
+              <p className="text-muted text-[11px]">
+                Prompts connected 1AM wallet to execute <code className="text-sky-300 font-mono">registerAllocation</code> on Midnight Preprod testnet.
               </p>
             </div>
           </div>
-          <a
-            href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 text-sky-400 hover:text-sky-300 font-semibold no-underline"
-          >
-            <span>View on 1AM Explorer</span>
-            <ExternalLink size={12} />
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                resetOrganizerSecret();
+                setSubmitError(null);
+              }}
+              title="Reset organizer credentials to contract defaults"
+              className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 text-muted hover:text-text cursor-pointer"
+            >
+              <RefreshCw size={11} />
+              <span>Reset Credentials</span>
+            </button>
+            <a
+              href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-semibold no-underline"
+            >
+              <span>View on 1AM Explorer</span>
+              <ExternalLink size={12} />
+            </a>
+          </div>
         </div>
 
         {/* Step Tab Strip */}
@@ -633,6 +657,25 @@ export const CreatePage: React.FC = () => {
                     <AlertCircle size={16} className="shrink-0" />
                     <span>{submitError}</span>
                   </div>
+                  {(submitError.toLowerCase().includes('organizer') ||
+                    submitError.toLowerCase().includes('unauthorized')) && (
+                    <div className="pt-1.5 space-y-2">
+                      <p className="text-[11px] text-rose-300">
+                        The cached organizer administrative key in your browser did not match the smart contract verification key. Resetting will restore the default verified organizer key for this deployment.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetOrganizerSecret();
+                          setSubmitError(null);
+                        }}
+                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold cursor-pointer"
+                      >
+                        <RefreshCw size={13} />
+                        <span>Reset Organizer Credentials to Contract Default &amp; Dismiss</span>
+                      </button>
+                    </div>
+                  )}
                   {submitError.toLowerCase().includes('not detected') && (
                     <div className="pt-1 flex flex-wrap items-center gap-2">
                       <a

@@ -28,6 +28,7 @@ export const VaultPage: React.FC = () => {
     refreshVaultState,
     registerAllocation,
     closeDistribution,
+    resetOrganizerSecret,
     isProving,
     provingStep,
     lastTxHash,
@@ -485,8 +486,21 @@ export const VaultPage: React.FC = () => {
               </div>
 
               {addError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded">
-                  {addError}
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded space-y-2">
+                  <div>{addError}</div>
+                  {(addError.toLowerCase().includes('organizer') ||
+                    addError.toLowerCase().includes('unauthorized')) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetOrganizerSecret();
+                        setAddError(null);
+                      }}
+                      className="btn-pill btn-pill-sky text-xs py-1 px-3 font-semibold cursor-pointer"
+                    >
+                      Reset Organizer Credentials to Contract Default
+                    </button>
+                  )}
                 </div>
               )}
 
