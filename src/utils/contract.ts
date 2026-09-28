@@ -1,12 +1,22 @@
 /**
  * VaultSplitX: Cryptographic and Contract Interaction Helpers
  *
- * Implements client-side derivation of:
- * 1. Organizer Key: hash("VaultSplitX:v1:organizer" || secret)
- * 2. Recipient Key: hash("VaultSplitX:v1:recipient" || secret)
- * 3. Allocation Commitment: hash("VaultSplitX:v1:commitment" || recipientKey || amount || salt || distId)
- * 4. Claim Nullifier: hash("VaultSplitX:v1:nullifier" || commitment || claimSecret)
+ * Implements client-side derivation using Midnight Compact pureCircuits:
+ * 1. Organizer Key: pureCircuits.deriveOrganizerKey(secret)
+ * 2. Recipient Key: pureCircuits.deriveRecipientKey(secret)
+ * 3. Allocation Commitment: pureCircuits.deriveAllocationCommitment(recipientKey, amount, salt, distId)
+ * 4. Claim Nullifier: pureCircuits.deriveClaimNullifier(commitment, claimSecret)
  */
+
+import { pureCircuits } from '../contract/index.js';
+import {
+  hexToBytes as hexToBytesImpl,
+  bytesToHex as bytesToHexImpl,
+  generateRandomHex,
+  pad32String,
+  bigintToBytes32,
+} from '../midnight/crypto';
+import deployment from '../../deployment.json';
 
 export interface ContributorAllocation {
   id: string;
@@ -17,6 +27,7 @@ export interface ContributorAllocation {
   salt: string;
   commitment: string;
   claimed: boolean;
+  txHash?: string;
 }
 
 export interface DistributionVaultState {
@@ -29,6 +40,7 @@ export interface DistributionVaultState {
   claimedCount: number;
   isClosed: boolean;
   allocations: ContributorAllocation[];
+  contractAddress: string;
 }
 
 export interface ClaimSubmission {
@@ -43,99 +55,36 @@ export interface ClaimVerificationResult {
   success: boolean;
   commitment: string;
   nullifier: string;
+  txHash?: string;
   message: string;
   timestamp: string;
 }
 
-// SHA-256 helper for client-side browsers and node
-async function sha256Bytes(data: Uint8Array): Promise<Uint8Array> {
-  if (typeof window !== 'undefined' && window.crypto?.subtle) {
-    const hash = await window.crypto.subtle.digest('SHA-256', data as unknown as ArrayBufferView<ArrayBuffer>);
-    return new Uint8Array(hash);
-  }
-  // Fallback for Node environments
-  const cryptoModule = await import('node:crypto');
-  return new Uint8Array(cryptoModule.createHash('sha256').update(data).digest());
-}
+export const hexToBytes = hexToBytesImpl;
+export const bytesToHex = bytesToHexImpl;
+export const padString32 = pad32String;
+export { bigintToBytes32 };
 
-// Convert string to UTF-8 bytes with 32-byte padding
-export function padString32(str: string): Uint8Array {
-  const enc = new TextEncoder().encode(str);
-  const out = new Uint8Array(32);
-  out.set(enc.subarray(0, 32));
-  return out;
-}
-
-// Convert bigint to 32-byte big-endian Uint8Array
-export function bigintToBytes32(val: bigint): Uint8Array {
-  const hex = val.toString(16).padStart(64, '0');
-  const bytes = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
-
-// Convert hex string to Uint8Array
-export function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
-  const len = clean.length;
-  const bytes = new Uint8Array(Math.ceil(len / 2));
-  for (let i = 0; i < len; i += 2) {
-    bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-// Convert Uint8Array to hex string
-export function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// Generate random 32-byte hex string
 export function generateRandomHex32(): string {
-  const bytes = new Uint8Array(32);
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-    window.crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < 32; i++) bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return bytesToHex(bytes);
-}
-
-// Concatenate multiple Uint8Arrays
-function concatBytes(arrays: Uint8Array[]): Uint8Array {
-  const totalLen = arrays.reduce((acc, a) => acc + a.length, 0);
-  const out = new Uint8Array(totalLen);
-  let offset = 0;
-  for (const arr of arrays) {
-    out.set(arr, offset);
-    offset += arr.length;
-  }
-  return out;
+  return generateRandomHex(32);
 }
 
 /**
- * Derive Organizer Key
+ * Derive Organizer Key via Midnight Compact circuit
  */
 export async function deriveOrganizerKey(organizerSecret: Uint8Array): Promise<Uint8Array> {
-  const tag = padString32('VaultSplitX:v1:organizer');
-  return sha256Bytes(concatBytes([tag, organizerSecret]));
+  return pureCircuits.deriveOrganizerKey(organizerSecret);
 }
 
 /**
- * Derive Recipient Key
+ * Derive Recipient Key via Midnight Compact circuit
  */
 export async function deriveRecipientKey(recipientSecret: Uint8Array): Promise<Uint8Array> {
-  const tag = padString32('VaultSplitX:v1:recipient');
-  return sha256Bytes(concatBytes([tag, recipientSecret]));
+  return pureCircuits.deriveRecipientKey(recipientSecret);
 }
 
 /**
- * Derive Allocation Commitment
- * Commitment = Hash(tag, recipientKey, amount, salt, distributionId)
+ * Derive Allocation Commitment via Midnight Compact circuit
  */
 export async function deriveAllocationCommitment(
   recipientKey: Uint8Array,
@@ -143,39 +92,56 @@ export async function deriveAllocationCommitment(
   salt: Uint8Array,
   distributionId: Uint8Array,
 ): Promise<Uint8Array> {
-  const tag = padString32('VaultSplitX:v1:commitment');
-  const amountBytes = bigintToBytes32(amount);
-  return sha256Bytes(concatBytes([tag, recipientKey, amountBytes, salt, distributionId]));
+  return pureCircuits.deriveAllocationCommitment(recipientKey, amount, salt, distributionId);
 }
 
 /**
- * Derive Claim Nullifier
- * Nullifier = Hash(tag, commitment, claimSecret)
+ * Derive Claim Nullifier via Midnight Compact circuit
  */
 export async function deriveClaimNullifier(
   commitment: Uint8Array,
   claimSecret: Uint8Array,
 ): Promise<Uint8Array> {
-  const tag = padString32('VaultSplitX:v1:nullifier');
-  return sha256Bytes(concatBytes([tag, commitment, claimSecret]));
+  return pureCircuits.deriveClaimNullifier(commitment, claimSecret);
 }
 
 /**
- * Create default initial demo distribution
+ * Create default initial state matching deployed contract on Midnight Preprod
  */
 export async function createDemoVaultState(): Promise<DistributionVaultState> {
-  const distIdBytes = padString32('VaultSplitX:Preprod:Batch01');
-  const distIdHex = bytesToHex(distIdBytes);
+  const contractAddress =
+    deployment.contractAddress ||
+    'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
 
-  const organizerSecret = padString32('demo_treasury_lead_secret_key');
-  const organizerKeyBytes = await deriveOrganizerKey(organizerSecret);
-  const organizerKeyHex = bytesToHex(organizerKeyBytes);
+  const distIdHex =
+    deployment.parameters?.distributionId ||
+    'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
+  const distIdBytes = hexToBytes(distIdHex);
+
+  const organizerKeyHex =
+    deployment.parameters?.organizerKey ||
+    'ec09fba5287d79904b8fc6e9c697beca57ec057ee4d41e8988da557833d5fc13';
 
   // 3 sample confidential allocations
   const demoAllocationsData = [
-    { role: 'Lead ZK Protocol Architect', amount: 35_000n, seed: 'contributor_alice_seed' },
-    { role: 'Senior Smart Contract Engineer', amount: 25_000n, seed: 'contributor_bob_seed' },
-    { role: 'Security Auditor & Reviewer', amount: 15_000n, seed: 'contributor_carol_seed' },
+    {
+      role: 'Lead ZK Protocol Architect',
+      amount: 40_000n,
+      seedHex: '0101010101010101010101010101010101010101010101010101010101010101',
+      saltHex: '1111111111111111111111111111111111111111111111111111111111111111',
+    },
+    {
+      role: 'Senior Smart Contract Engineer',
+      amount: 35_000n,
+      seedHex: '0202020202020202020202020202020202020202020202020202020202020202',
+      saltHex: '2222222222222222222222222222222222222222222222222222222222222222',
+    },
+    {
+      role: 'Security Auditor & Reviewer',
+      amount: 25_000n,
+      seedHex: '0303030303030303030303030303030303030303030303030303030303030303',
+      saltHex: '3333333333333333333333333333333333333333333333333333333333333333',
+    },
   ];
 
   const allocations: ContributorAllocation[] = [];
@@ -183,10 +149,10 @@ export async function createDemoVaultState(): Promise<DistributionVaultState> {
 
   for (let i = 0; i < demoAllocationsData.length; i++) {
     const item = demoAllocationsData[i];
-    const recSecret = padString32(item.seed);
-    const recKeyBytes = await deriveRecipientKey(recSecret);
-    const saltBytes = hexToBytes(generateRandomHex32());
-    const commBytes = await deriveAllocationCommitment(
+    const recSecret = hexToBytes(item.seedHex);
+    const recKeyBytes = pureCircuits.deriveRecipientKey(recSecret);
+    const saltBytes = hexToBytes(item.saltHex);
+    const commBytes = pureCircuits.deriveAllocationCommitment(
       recKeyBytes,
       item.amount,
       saltBytes,
@@ -199,9 +165,9 @@ export async function createDemoVaultState(): Promise<DistributionVaultState> {
       id: `alloc-${i + 1}`,
       role: item.role,
       recipientKey: bytesToHex(recKeyBytes),
-      recipientSecret: bytesToHex(recSecret),
+      recipientSecret: item.seedHex,
       amount: item.amount,
-      salt: bytesToHex(saltBytes),
+      salt: item.saltHex,
       commitment: commHex,
       claimed: false,
     });
@@ -210,12 +176,13 @@ export async function createDemoVaultState(): Promise<DistributionVaultState> {
   return {
     organizerKey: organizerKeyHex,
     distributionId: distIdHex,
-    title: 'Q3 Contributor Treasury Disbursement',
-    totalVaultFunds: 75_000n,
+    title: 'Contributor Treasury Q4 Disbursement',
+    totalVaultFunds: 100_000n,
     commitments,
     claimedNullifiers: [],
     claimedCount: 0,
     isClosed: false,
     allocations,
+    contractAddress,
   };
 }

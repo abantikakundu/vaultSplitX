@@ -8,12 +8,13 @@ import {
   EyeOff,
   CheckCircle2,
   FileCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { NETWORK_CONFIG } from '../utils/config';
 
 export const VerifyPage: React.FC = () => {
-  const { vaultState } = useVault();
+  const { vaultState, refreshVaultState, isSyncing } = useVault();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleCopy = (text: string, key: string) => {
@@ -36,8 +37,13 @@ export const VerifyPage: React.FC = () => {
       <section className="bg-bg-elev border-b border-border py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div className="space-y-3 max-w-2xl">
-            <div className="text-xs uppercase font-extrabold tracking-widest text-sky-400">
-              Public Verification & Audit
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase font-extrabold tracking-widest text-sky-400">
+                Public Verification & Audit
+              </span>
+              <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Midnight Indexer v4
+              </span>
             </div>
 
             <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-text tracking-tight">
@@ -49,13 +55,23 @@ export const VerifyPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Quick Explorer Link Chip */}
-          <div className="flex items-center gap-3">
+          {/* Quick Explorer Link Chip and Sync */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => refreshVaultState()}
+              disabled={isSyncing}
+              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
+              title="Refresh live parameters from Midnight GraphQL indexer"
+            >
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} />
+              <span>{isSyncing ? 'Syncing...' : 'Sync Indexer'}</span>
+            </button>
+
             <a
               href={NETWORK_CONFIG.explorerUrl}
               target="_blank"
               rel="noreferrer"
-              className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5"
+              className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5 no-underline font-bold"
             >
               <span>Explore Preprod Contract</span>
               <ExternalLink size={13} />

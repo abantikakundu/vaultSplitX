@@ -14,7 +14,8 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
-import { NETWORK_CONFIG } from '../utils/config';
+import { NETWORK_CONFIG, getExplorerTxUrl } from '../utils/config';
+import { useWallet } from '../context/WalletContext';
 import { ContributorAllocation, generateRandomHex32 } from '../utils/contract';
 
 export const ClaimPage: React.FC = () => {
@@ -325,6 +326,28 @@ export const ClaimPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {claimResult.txHash && (
+                <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-sans font-bold uppercase tracking-wider text-sky-400 block">
+                      Live Midnight Preprod Transaction
+                    </span>
+                    <span className="font-mono text-xs text-text break-all">
+                      0x{claimResult.txHash.replace(/^0x/, '')}
+                    </span>
+                  </div>
+                  <a
+                    href={getExplorerTxUrl(claimResult.txHash, 'preprod')}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                  >
+                    <span>View on 1AM Explorer</span>
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              )}
 
               <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
                 <p className="text-xs text-emerald-300 italic">

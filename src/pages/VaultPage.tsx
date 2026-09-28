@@ -13,12 +13,26 @@ import {
   Loader2,
   Copy,
   Check,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
+import { getExplorerContractUrl, getExplorerTxUrl } from '../utils/config';
 
 export const VaultPage: React.FC = () => {
-  const { vaultState, isLoadingVault, registerAllocation, closeDistribution } = useVault();
+  const {
+    vaultState,
+    isLoadingVault,
+    isSyncing,
+    refreshVaultState,
+    registerAllocation,
+    closeDistribution,
+    isProving,
+    provingStep,
+    lastTxHash,
+    lastTxExplorerUrl,
+  } = useVault();
   const wallet = useWallet();
 
   // New allocation modal/form state
@@ -114,14 +128,39 @@ export const VaultPage: React.FC = () => {
               {vaultState?.title || 'Distribution Vault'}
             </h1>
 
-            <div className="flex items-center gap-2 font-mono text-xs text-muted">
-              <span>Batch ID:</span>
-              <span className="text-text">{vaultState?.distributionId.slice(0, 16)}...{vaultState?.distributionId.slice(-8)}</span>
+            <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-muted">
+              <div className="flex items-center gap-1.5">
+                <span>Batch ID:</span>
+                <span className="text-text">{vaultState?.distributionId.slice(0, 16)}...{vaultState?.distributionId.slice(-8)}</span>
+              </div>
+              <span>•</span>
+              <div className="flex items-center gap-1.5">
+                <span>Contract:</span>
+                <a
+                  href={getExplorerContractUrl(vaultState?.contractAddress || '', wallet.network || 'preprod')}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-400 hover:underline flex items-center gap-1"
+                >
+                  <span>{vaultState?.contractAddress.slice(0, 8)}...{vaultState?.contractAddress.slice(-6)}</span>
+                  <ExternalLink size={11} />
+                </a>
+              </div>
             </div>
           </div>
 
           {/* Organizer Quick Actions */}
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => refreshVaultState()}
+              disabled={isSyncing}
+              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5"
+              title="Refresh live state from Midnight indexer"
+            >
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} />
+              <span>{isSyncing ? 'Syncing...' : 'Sync Indexer'}</span>
+            </button>
+
             {!isClosed && (
               <>
                 <button
@@ -134,7 +173,7 @@ export const VaultPage: React.FC = () => {
 
                 <button
                   onClick={handleClose}
-                  disabled={isClosing}
+                  disabled={isClosing || isProving}
                   className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 text-rose-400 hover:border-rose-400"
                 >
                   <Lock size={14} />
@@ -153,6 +192,44 @@ export const VaultPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Proving & Live Transaction Banners */}
+      <div className="max-w-7xl mx-auto px-6 space-y-4">
+        {isProving && (
+          <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex items-center gap-3 text-xs sm:text-sm">
+            <Loader2 size={18} className="animate-spin text-sky-400 shrink-0" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-text">Midnight On-Chain Transaction in Progress</span>
+              <p className="text-muted text-xs">{provingStep}</p>
+            </div>
+          </div>
+        )}
+
+        {lastTxHash && (
+          <div className="p-4 rounded bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
+            <div className="space-y-0.5">
+              <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                <Check size={16} />
+                <span>Midnight Preprod Transaction Broadcast</span>
+              </span>
+              <span className="font-mono text-xs text-text break-all">
+                0x{lastTxHash.replace(/^0x/, '')}
+              </span>
+            </div>
+            {lastTxExplorerUrl && (
+              <a
+                href={lastTxExplorerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+              >
+                <span>Verify on 1AM Explorer</span>
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 2. STATS & PROGRESS */}
       <section className="max-w-7xl mx-auto px-6 space-y-8">
@@ -284,20 +361,34 @@ export const VaultPage: React.FC = () => {
                     <div className="text-[10px] text-muted uppercase">Confidential Share</div>
                   </div>
 
-                  {alloc.claimed ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                      <Check size={13} />
-                      <span>Claimed</span>
-                    </span>
-                  ) : (
-                    <Link
-                      to={`/claim?role=${encodeURIComponent(alloc.role)}`}
-                      className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 flex items-center gap-1"
-                    >
-                      <span>Claim Share</span>
-                      <ArrowRight size={13} />
-                    </Link>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {alloc.txHash && (
+                      <a
+                        href={getExplorerTxUrl(alloc.txHash, wallet.network || 'preprod')}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:underline px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20"
+                        title="View registration transaction in 1AM explorer"
+                      >
+                        <span>tx: {alloc.txHash.slice(0, 8)}...</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                    {alloc.claimed ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <Check size={13} />
+                        <span>Claimed</span>
+                      </span>
+                    ) : (
+                      <Link
+                        to={`/claim?role=${encodeURIComponent(alloc.role)}`}
+                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 flex items-center gap-1"
+                      >
+                        <span>Claim Share</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -2,8 +2,9 @@ import React, { createContext, useContext } from 'react';
 import { useMidnight, MidnightWalletState } from '../hooks/useMidnight';
 
 interface WalletContextValue extends MidnightWalletState {
-  connectWallet: (preferSimulation?: boolean) => Promise<void>;
+  connectWallet: (preferSimulationOrWalletId?: boolean | string) => Promise<void>;
   disconnectWallet: () => void;
+  refreshBalance: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);

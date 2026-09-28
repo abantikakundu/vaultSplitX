@@ -13,9 +13,11 @@ import {
   AlertCircle,
   ArrowRight,
   EyeOff,
+  ExternalLink,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
+import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 
 interface RecipientRow {
   id: string;
@@ -28,7 +30,7 @@ interface RecipientRow {
 
 export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { createDistributionBatch, vaultState } = useVault();
+  const { createDistributionBatch, vaultState, isProving, provingStep } = useVault();
   const wallet = useWallet();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -71,6 +73,7 @@ export const CreatePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [createdResult, setCreatedResult] = useState<{ contractAddress?: string; txHash?: string } | null>(null);
 
   // Calculations
   const totalFunds = useMemo(() => {
@@ -167,7 +170,8 @@ export const CreatePage: React.FC = () => {
         };
       });
 
-      await createDistributionBatch(distTitle, totalFunds, allocationsPayload);
+      const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload);
+      setCreatedResult(res);
       setSubmitSuccess(true);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to register distribution batch');
@@ -565,6 +569,17 @@ export const CreatePage: React.FC = () => {
                 </button>
               </section>
 
+              {/* Proving Status */}
+              {isProving && (
+                <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex items-center gap-3 text-xs sm:text-sm">
+                  <Loader2 size={18} className="animate-spin text-sky-400 shrink-0" />
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-text">Midnight On-Chain Execution</span>
+                    <p className="text-muted text-xs">{provingStep}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Feedback States */}
               {submitError && (
                 <div className="p-4 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
@@ -574,14 +589,35 @@ export const CreatePage: React.FC = () => {
               )}
 
               {submitSuccess && (
-                <div className="p-5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm space-y-2">
-                  <div className="flex items-center gap-2 font-bold">
-                    <Check size={18} />
-                    <span>Distribution successfully created and registered!</span>
+                <div className="p-6 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm space-y-4">
+                  <div className="flex items-center gap-2 font-bold text-base">
+                    <Check size={20} />
+                    <span>Distribution successfully created and registered on Midnight Preprod!</span>
                   </div>
                   <p className="text-xs text-emerald-300">
-                    Opaque commitments have been published to Midnight. Recipients can now privately claim their allocations.
+                    Opaque commitments have been published to the Midnight ledger. Recipients can now privately claim their allocations with ZK proofs.
                   </p>
+
+                  {createdResult?.txHash && (
+                    <div className="p-3 bg-surface border border-border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span className="text-muted text-[11px] block font-sans">Transaction Hash:</span>
+                        <span className="font-mono text-text break-all">
+                          0x{createdResult.txHash.replace(/^0x/, '')}
+                        </span>
+                      </div>
+                      <a
+                        href={getExplorerTxUrl(createdResult.txHash, wallet.network || 'preprod')}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                      >
+                        <span>View on 1AM Explorer</span>
+                        <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  )}
+
                   <div className="pt-2">
                     <Link to="/vault" className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5">
                       <span>View in Vault Dashboard</span>

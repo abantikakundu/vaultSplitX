@@ -128,15 +128,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                 aria-expanded={walletMenuOpen}
                 aria-haspopup="true"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={`w-2 h-2 rounded-full ${wallet.isSimulated ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
                 <span>{truncatedAddress}</span>
+                {wallet.isSimulated && <span className="text-[10px] text-amber-400 font-sans font-bold">[Sim]</span>}
                 <ChevronDown size={14} className="text-muted" />
               </button>
 
               {walletMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-surface border border-border rounded shadow-lg p-2 z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-surface border border-border rounded shadow-lg p-2 z-50">
                   <div className="px-3 py-2 border-b border-border text-xs">
-                    <span className="text-muted block text-[10px] uppercase font-bold">Network Balance</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-muted text-[10px] uppercase font-bold">
+                        {wallet.isSimulated ? 'Demo Simulator' : wallet.walletName || '1AM Wallet'}
+                      </span>
+                      <span className={`text-[10px] font-bold uppercase ${wallet.isSimulated ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        {wallet.isSimulated ? 'Simulated' : 'Connected'}
+                      </span>
+                    </div>
                     <span className="font-mono font-bold text-text text-sm">
                       {Number(wallet.balance).toLocaleString()} tDUST
                     </span>
@@ -153,6 +161,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                       </span>
                       {copied && <Check size={13} className="text-emerald-400" />}
                     </button>
+
+                    <a
+                      href={`https://explorer.1am.xyz/contract/${wallet.address}?network=preprod`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-surface-hover rounded text-text transition-colors no-underline"
+                    >
+                      <Wallet size={13} className="text-sky-400" />
+                      <span>View in 1AM Explorer</span>
+                    </a>
 
                     <button
                       onClick={() => {
@@ -177,19 +195,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                 aria-label="Connect Wallet"
               >
                 <Wallet size={14} />
-                <span>{wallet.isConnecting ? 'Connecting...' : 'Connect Wallet'}</span>
+                <span>
+                  {wallet.isConnecting
+                    ? 'Connecting...'
+                    : wallet.installedWallets.length > 0
+                    ? `Connect ${wallet.installedWallets[0].name || '1AM'}`
+                    : 'Connect 1AM Wallet'}
+                </span>
               </button>
 
-              {!wallet.hasLaceExtension && (
-                <button
-                  onClick={() => wallet.connectWallet(true)}
-                  className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex"
-                  title="Connect simulated reviewer demo wallet"
-                  aria-label="Demo Wallet"
-                >
-                  Demo
-                </button>
-              )}
+              <button
+                onClick={() => wallet.connectWallet('demo')}
+                className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex"
+                title="Connect simulated reviewer demo wallet"
+                aria-label="Demo Wallet"
+              >
+                Demo
+              </button>
             </div>
           )}
 
