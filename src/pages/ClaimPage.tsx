@@ -12,11 +12,65 @@ import {
   Sigma,
   ArrowRight,
   EyeOff,
+  FileText,
+  Sparkles,
+  Upload,
+  Download,
+  X,
+  Code2,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { useWallet } from '../context/WalletContext';
 import { ContributorAllocation, generateRandomHex32 } from '../utils/contract';
+
+export interface ClaimTemplate {
+  id: string;
+  title: string;
+  category: string;
+  role: string;
+  amount: string;
+  description: string;
+  seed: string;
+  salt: string;
+  badge: string;
+}
+
+export const FEATURED_CLAIM_TEMPLATES: ClaimTemplate[] = [
+  {
+    id: 'alloc-1',
+    title: 'Lead ZK Protocol Architect',
+    category: 'Core Engineering Milestone',
+    role: 'Lead ZK Protocol Architect',
+    amount: '40000',
+    description: 'Quarterly milestone disbursement for Compact circuit design and proving key generation.',
+    seed: '0101010101010101010101010101010101010101010101010101010101010101',
+    salt: '1111111111111111111111111111111111111111111111111111111111111111',
+    badge: 'Core Grant',
+  },
+  {
+    id: 'alloc-2',
+    title: 'Senior Smart Contract Engineer',
+    category: 'Smart Contract Delivery',
+    role: 'Senior Smart Contract Engineer',
+    amount: '35000',
+    description: 'Compensation for Midnight Preprod deployment, state machine hardening, and 1AM wallet connector.',
+    seed: '0202020202020202020202020202020202020202020202020202020202020202',
+    salt: '2222222222222222222222222222222222222222222222222222222222222222',
+    badge: 'Development',
+  },
+  {
+    id: 'alloc-3',
+    title: 'Security Auditor & Reviewer',
+    category: 'Security Review Bounty',
+    role: 'Security Auditor & Reviewer',
+    amount: '25000',
+    description: 'Security vulnerability bounty for confidential leaf commitment and double-claim nullifier audit.',
+    seed: '0303030303030303030303030303030303030303030303030303030303030303',
+    salt: '3333333333333333333333333333333333333333333333333333333333333333',
+    badge: 'Security Bounty',
+  },
+];
 
 export const ClaimPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -34,6 +88,14 @@ export const ClaimPage: React.FC = () => {
   const [claimSpendSecret, setClaimSpendSecret] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedAllocId, setSelectedAllocId] = useState<string | null>(null);
+
+  // Template Modal and Prompt State
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateTab, setTemplateTab] = useState<'featured' | 'custom'>('featured');
+  const [pastedVoucherText, setPastedVoucherText] = useState('');
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [templateLoadedNotice, setTemplateLoadedNotice] = useState<string | null>(null);
+  const [exportedVoucherNotice, setExportedVoucherNotice] = useState(false);
 
   // Initialize distId
   useEffect(() => {
@@ -80,6 +142,85 @@ export const ClaimPage: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedField(label);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleApplyTemplate = (tpl: ClaimTemplate) => {
+    clearClaimState();
+    setSelectedAllocId(tpl.id);
+    setRecipientSecret(tpl.seed);
+    setAmount(tpl.amount);
+    setSalt(tpl.salt);
+    setClaimSpendSecret(generateRandomHex32());
+    if (vaultState?.distributionId) {
+      setDistId(vaultState.distributionId);
+    }
+    setTemplateLoadedNotice(`Template loaded: ${tpl.title} (${Number(tpl.amount).toLocaleString()} tDUST)`);
+    setShowTemplateModal(false);
+    setTimeout(() => setTemplateLoadedNotice(null), 4000);
+  };
+
+  const handleParseVoucher = () => {
+    setVoucherError(null);
+    try {
+      if (!pastedVoucherText.trim()) {
+        throw new Error('Please paste a valid JSON voucher or template object.');
+      }
+      const parsed = JSON.parse(pastedVoucherText.trim());
+      const recSec = parsed.recipientSecret || parsed.seed || parsed.secret || '';
+      const amt = parsed.amount?.toString() || '';
+      const s = parsed.salt || '';
+      const d = parsed.distributionId || parsed.distId || vaultState?.distributionId || '';
+
+      if (!recSec || !amt || !s) {
+        throw new Error('Missing required voucher fields: recipientSecret, amount, and salt are required.');
+      }
+
+      clearClaimState();
+      setRecipientSecret(recSec);
+      setAmount(amt);
+      setSalt(s);
+      if (d) setDistId(d);
+      setClaimSpendSecret(generateRandomHex32());
+      setSelectedAllocId(null);
+      setShowTemplateModal(false);
+      setPastedVoucherText('');
+      setTemplateLoadedNotice(`Voucher parsed and loaded: ${Number(amt).toLocaleString()} tDUST`);
+      setTimeout(() => setTemplateLoadedNotice(null), 4000);
+    } catch (err: unknown) {
+      setVoucherError(err instanceof Error ? err.message : 'Invalid JSON voucher format.');
+    }
+  };
+
+  const handleLoadSampleVoucherIntoModal = () => {
+    const sample = {
+      network: wallet.network || 'preprod',
+      contractAddress: targetContractAddress,
+      distributionId: distId || vaultState?.distributionId || 'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a',
+      role: 'Lead ZK Protocol Architect',
+      amount: '40000',
+      recipientSecret: '0101010101010101010101010101010101010101010101010101010101010101',
+      salt: '1111111111111111111111111111111111111111111111111111111111111111',
+      instructions: 'Paste this voucher into VaultSplitX to prove entitlement via ZK witness.',
+    };
+    setPastedVoucherText(JSON.stringify(sample, null, 2));
+    setVoucherError(null);
+  };
+
+  const handleExportVoucher = () => {
+    const voucherData = {
+      network: wallet.network || 'preprod',
+      contractAddress: targetContractAddress,
+      distributionId: distId || vaultState?.distributionId || '',
+      role: FEATURED_CLAIM_TEMPLATES.find((t) => t.id === selectedAllocId)?.role || 'Confidential Contributor',
+      amount: amount || '0',
+      recipientSecret,
+      salt,
+      instructions: 'Use this voucher on the VaultSplitX Claim page to synthesize a zero-knowledge claim proof.',
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(voucherData, null, 2));
+    setExportedVoucherNotice(true);
+    setTimeout(() => setExportedVoucherNotice(false), 2500);
   };
 
   const handleClaim = async (e: React.FormEvent) => {
@@ -207,44 +348,170 @@ export const ClaimPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick-Test Presets from Vault */}
-        <div className="p-5 bg-surface border border-border rounded-lg space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted block">
-              Preloaded Contributor Test Credentials (Click to Auto-Fill):
-            </span>
-            <span className="text-[11px] text-muted">
-              Select an allocation to test confidential entitlement proof
-            </span>
+        {/* Template Loaded Notice Banner */}
+        {templateLoadedNotice && (
+          <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs flex items-center justify-between shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <Sparkles size={15} className="text-emerald-400 shrink-0" />
+              <span className="font-semibold">{templateLoadedNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTemplateLoadedNotice(null)}
+              className="text-emerald-400 hover:text-white cursor-pointer p-0.5"
+              aria-label="Dismiss template loaded notice"
+            >
+              <X size={14} />
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {vaultState?.allocations.map((alloc) => {
-              const isSelected = selectedAllocId === alloc.id;
+        )}
+
+        {/* Claim Templates & Voucher Prompt Section */}
+        <div className="sharp-card p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-emerald-400" />
+                <h3 className="font-display text-base font-bold text-text">
+                  Claim Templates & Vouchers
+                </h3>
+              </div>
+              <p className="text-xs text-muted mt-0.5">
+                Select a preconfigured entitlement scenario or prompt a private JSON voucher.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setTemplateTab('custom');
+                  setShowTemplateModal(true);
+                }}
+                className="btn-pill btn-pill-outline text-xs py-1.5 px-3 flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 cursor-pointer"
+                title="Prompt or paste a custom JSON claim voucher"
+              >
+                <Upload size={13} />
+                <span>Prompt / Paste Voucher</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportVoucher}
+                className="btn-pill btn-pill-outline text-xs py-1.5 px-3 flex items-center gap-1.5 text-muted hover:text-text cursor-pointer"
+                title="Copy current claim credentials as a sharable JSON voucher"
+              >
+                <Copy size={13} />
+                <span>{exportedVoucherNotice ? '✓ Copied Voucher!' : 'Export Voucher'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Featured Template Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {FEATURED_CLAIM_TEMPLATES.map((tpl) => {
+              const isSelected = selectedAllocId === tpl.id;
+              const matchingAlloc = vaultState?.allocations.find(
+                (a) => a.recipientSecret === tpl.seed || a.role.toLowerCase() === tpl.role.toLowerCase()
+              );
+              const isClaimed = matchingAlloc?.claimed ?? false;
+
               return (
-                <button
-                  key={alloc.id}
-                  type="button"
-                  onClick={() => handleQuickFill(alloc)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-2 ${
+                <div
+                  key={tpl.id}
+                  onClick={() => handleApplyTemplate(tpl)}
+                  className={`p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                     isSelected
-                      ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300 shadow-sm'
-                      : 'bg-surface-hover hover:bg-surface border-border hover:border-emerald-400/60 text-text'
+                      ? 'border-emerald-400 bg-emerald-500/10 shadow-sm ring-1 ring-emerald-400/40'
+                      : 'border-border bg-surface hover:bg-surface-hover hover:border-emerald-400/50'
                   }`}
                 >
-                  {isSelected && <Check size={12} className="text-emerald-400" />}
-                  <span>{alloc.role}</span>
-                  <span className="font-mono text-sky-400">
-                    ({Number(alloc.amount).toLocaleString()} tDUST)
-                  </span>
-                  {alloc.claimed && (
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase bg-emerald-500/20 px-1.5 py-0.5 rounded">
-                      Claimed
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-hover border border-border text-muted">
+                        {tpl.badge}
+                      </span>
+                      {isClaimed ? (
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                          Claimed
+                        </span>
+                      ) : isSelected ? (
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                          <Check size={10} />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Ready
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="font-display text-sm font-bold text-text truncate">
+                      {tpl.title}
+                    </h4>
+
+                    <div className="font-mono text-lg font-extrabold text-sky-400">
+                      {Number(tpl.amount).toLocaleString()}{' '}
+                      <span className="text-xs font-sans font-normal text-muted">tDUST</span>
+                    </div>
+
+                    <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                      {tpl.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
+                    <span className="font-mono text-muted text-[10px]">
+                      seed: {tpl.seed.slice(0, 8)}...
                     </span>
-                  )}
-                </button>
+                    <span className={`font-semibold ${isSelected ? 'text-emerald-400' : 'text-muted group-hover:text-text'}`}>
+                      {isSelected ? 'Selected ✓' : 'Load Template →'}
+                    </span>
+                  </div>
+                </div>
               );
             })}
           </div>
+
+          {/* Quick Access Chips for Other Batch Allocations */}
+          {vaultState?.allocations && vaultState.allocations.length > 3 && (
+            <div className="pt-2 border-t border-border/60 space-y-2">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">
+                Additional Vault Batch Allocations:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {vaultState.allocations
+                  .filter((a) => !FEATURED_CLAIM_TEMPLATES.some((t) => t.seed === a.recipientSecret))
+                  .map((alloc) => {
+                    const isSelected = selectedAllocId === alloc.id;
+                    return (
+                      <button
+                        key={alloc.id}
+                        type="button"
+                        onClick={() => handleQuickFill(alloc)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300'
+                            : 'bg-surface-hover hover:bg-surface border-border text-text'
+                        }`}
+                      >
+                        {isSelected && <Check size={11} className="text-emerald-400" />}
+                        <span>{alloc.role}</span>
+                        <span className="font-mono text-sky-400">
+                          ({Number(alloc.amount).toLocaleString()} tDUST)
+                        </span>
+                        {alloc.claimed && (
+                          <span className="text-[9px] text-emerald-400 font-bold uppercase">
+                            [Claimed]
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Claim Form */}
@@ -519,6 +786,161 @@ export const ClaimPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Template & Voucher Prompt Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-bg-elev border border-border rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <Sparkles size={20} className="text-emerald-400" />
+                <h3 className="font-display text-lg font-bold text-text">
+                  Prompt Claim Template or Voucher
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setVoucherError(null);
+                }}
+                className="p-1 rounded text-muted hover:text-text cursor-pointer"
+                aria-label="Close template modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex items-center gap-2 border-b border-border pb-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setTemplateTab('featured')}
+                className={`px-3.5 py-1.5 rounded-full font-semibold transition-colors cursor-pointer ${
+                  templateTab === 'featured'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'text-muted hover:text-text'
+                }`}
+              >
+                Preset Scenarios (3)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateTab('custom')}
+                className={`px-3.5 py-1.5 rounded-full font-semibold transition-colors cursor-pointer ${
+                  templateTab === 'custom'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'text-muted hover:text-text'
+                }`}
+              >
+                Paste JSON Voucher
+              </button>
+            </div>
+
+            {templateTab === 'featured' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted leading-relaxed">
+                  Select a preconfigured Midnight contributor credential set to populate your private witness, amount, and blinding salt into the claim circuit:
+                </p>
+                <div className="space-y-2.5">
+                  {FEATURED_CLAIM_TEMPLATES.map((tpl) => {
+                    const isClaimed = vaultState?.allocations.find(
+                      (a) => a.recipientSecret === tpl.seed || a.role.toLowerCase() === tpl.role.toLowerCase()
+                    )?.claimed;
+
+                    return (
+                      <div
+                        key={tpl.id}
+                        className="p-4 rounded-lg bg-surface border border-border hover:border-emerald-400/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-text text-sm">{tpl.title}</span>
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {tpl.badge}
+                            </span>
+                            {isClaimed && (
+                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                                Claimed
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted leading-relaxed">{tpl.description}</p>
+                          <div className="font-mono text-[11px] text-muted flex items-center gap-2 pt-0.5">
+                            <span>Witness: {tpl.seed.slice(0, 10)}...</span>
+                            <span>•</span>
+                            <span className="text-sky-400 font-bold">{Number(tpl.amount).toLocaleString()} tDUST</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTemplate(tpl)}
+                          className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 font-bold cursor-pointer"
+                        >
+                          Prompt & Apply
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-text">
+                    Paste Voucher JSON or Template Object:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleVoucherIntoModal}
+                    className="text-[11px] text-sky-400 hover:underline cursor-pointer flex items-center gap-1 font-semibold"
+                  >
+                    <Code2 size={13} />
+                    <span>Insert Sample Voucher</span>
+                  </button>
+                </div>
+
+                <textarea
+                  rows={8}
+                  value={pastedVoucherText}
+                  onChange={(e) => setPastedVoucherText(e.target.value)}
+                  placeholder={`{\n  "recipientSecret": "0101010101010101010101010101010101010101010101010101010101010101",\n  "amount": "40000",\n  "salt": "1111111111111111111111111111111111111111111111111111111111111111",\n  "distributionId": "a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a"\n}`}
+                  className="w-full bg-surface border border-border rounded-lg p-3 text-xs font-mono text-text focus:outline-none focus:border-emerald-400 resize-none"
+                />
+
+                {voucherError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded text-rose-400 text-xs flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>{voucherError}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTemplateModal(false);
+                      setVoucherError(null);
+                    }}
+                    className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleParseVoucher}
+                    className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Upload size={13} />
+                    <span>Parse & Populate Claim Form</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
