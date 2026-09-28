@@ -404,9 +404,13 @@ async function proveAndSubmitTx(
   const keyMaterialProvider = makeKeyMaterialProvider();
   const provingProvider = await connectedApi.getProvingProvider(keyMaterialProvider);
 
-  // Get the ContractOperation (verifier key) for this circuit from on-chain state
+  // Get the ContractOperation (verifier key) for this circuit from on-chain state or keyMaterialProvider
   const ledgerState = LedgerContractState.deserialize(contractStateObj.serialize());
-  const op = ledgerState.operation(circuitName) ?? new ContractOperation();
+  let op = ledgerState.operation(circuitName);
+  if (!op || !op.verifierKey || op.verifierKey.length === 0) {
+    op = new ContractOperation();
+    op.verifierKey = await keyMaterialProvider.getVerifierKey(circuitName);
+  }
 
   // Build PreTranscript from public transcript
   const rand = communicationCommitmentRandomness();

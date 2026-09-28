@@ -16,7 +16,6 @@ import {
   registerAllocationOnChain,
   claimPayoutOnChain,
   closeDistributionOnChain,
-  deployDistributionOnChain,
   waitForTxConfirmation,
 } from '../midnight/contract';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
@@ -461,14 +460,26 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): Promise<{ contractAddress?: string; txHash?: string }> => {
     setIsProving(true);
     try {
-      setProvingStep('Deriving organizer master keys and batch identifier...');
-      const distIdHex = generateRandomHex32();
+      const netConfig = getNetworkConfig(wallet.network || 'preprod');
+      const targetContract =
+        vaultState?.contractAddress ||
+        netConfig.contractAddress ||
+        'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
+
+      setProvingStep(`Targeting smart contract: 0x${targetContract.slice(0, 8)}...`);
+      const distIdHex =
+        vaultState?.distributionId ||
+        netConfig.defaultOrganizer.distributionId ||
+        'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
       const distIdBytes = hexToBytes(distIdHex);
 
-      const organizerSecretHex = generateRandomHex32();
-      const organizerSecretBytes = hexToBytes(organizerSecretHex);
-      const organizerKeyBytes = pureCircuits.deriveOrganizerKey(organizerSecretBytes);
-      const organizerKeyHex = bytesToHex(organizerKeyBytes);
+      const organizerSecretHex =
+        getOrganizerSecret(targetContract) ||
+        netConfig.defaultOrganizer.organizerSecretHex;
+
+      const organizerKeyHex =
+        vaultState?.organizerKey ||
+        netConfig.defaultOrganizer.organizerKey;
 
       const newAllocations: ContributorAllocation[] = [];
       const newCommitments: string[] = [];
@@ -490,7 +501,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         newCommitments.push(commHex);
         newAllocations.push({
-          id: `alloc-${i + 1}`,
+          id: `alloc-${(vaultState?.allocations?.length || 0) + i + 1}`,
           role: item.role,
           recipientKey: bytesToHex(recKeyBytes),
           recipientSecret: bytesToHex(recSecret),
@@ -501,91 +512,64 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       }
 
-      let contractAddress = vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
       let txHash: string | undefined;
-
       const activeApi = overrideApi ?? (wallet.isSimulated ? null : wallet.connectedApi);
 
-      // Deploy real contract on Midnight if 1AM wallet is connected
       if (activeApi) {
-        setProvingStep('Prompting 1AM wallet: Deploying VaultSplitX distribution contract on Midnight Preprod...');
-        try {
-          const deployRes = await deployDistributionOnChain(
+        // CALL THE CONTRACT FUNCTION registerAllocation ON ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e
+        for (let i = 0; i < newCommitments.length; i++) {
+          setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] Prompting 1AM wallet: Calling registerAllocation on smart contract ff4cc6a1...`);
+          const regRes = await registerAllocationOnChain(
             activeApi,
-            organizerKeyHex,
-            distIdHex,
-            totalFunds,
+            targetContract,
+            newCommitments[i],
+            organizerSecretHex,
             wallet.network || 'preprod',
-            (msg) => setProvingStep(msg),
+            (msg) => setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] ${msg}`),
           );
-          contractAddress = deployRes.contractAddress;
-          txHash = deployRes.txHash;
+          newAllocations[i].txHash = regRes.txHash;
+          txHash = regRes.txHash;
           setLastTxHash(txHash);
           setLastTxExplorerUrl(getExplorerTxUrl(txHash, wallet.network || 'preprod'));
 
-          // Register allocations sequentially on-chain
-          for (let i = 0; i < newCommitments.length; i++) {
-            setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] Prompting 1AM wallet to register commitment...`);
+          // If multiple allocations, wait for confirmation of each block
+          if (i < newCommitments.length - 1) {
+            setProvingStep(`Waiting for Midnight block confirmation before registering allocation ${i + 2}...`);
             try {
-              const regRes = await registerAllocationOnChain(
-                activeApi,
-                contractAddress,
-                newCommitments[i],
-                organizerSecretHex,
-                wallet.network || 'preprod',
-                (msg) => setProvingStep(`[Allocation ${i + 1}] ${msg}`),
-              );
-              newAllocations[i].txHash = regRes.txHash;
-            } catch (regErr) {
-              console.warn(`Could not register allocation ${i + 1} immediately:`, regErr);
-            }
-          }
-        } catch (depErr) {
-          console.warn('Direct on-chain contract deployment fallback to existing contract:', depErr);
-          // If deploy failed (e.g., balance or gas limits), fall back to registering on existing master contract
-          for (let i = 0; i < newCommitments.length; i++) {
-            setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] Registering commitment on deployed contract via 1AM wallet...`);
-            try {
-              const netConfig = getNetworkConfig(wallet.network || 'preprod');
-              const defaultOrgSecret = getOrganizerSecret(contractAddress) || netConfig.defaultOrganizer.organizerSecretHex;
-              const regRes = await registerAllocationOnChain(
-                activeApi,
-                contractAddress,
-                newCommitments[i],
-                defaultOrgSecret,
-                wallet.network || 'preprod',
-                (msg) => setProvingStep(`[Allocation ${i + 1}] ${msg}`),
-              );
-              newAllocations[i].txHash = regRes.txHash;
-              txHash = regRes.txHash;
+              await waitForTxConfirmation(netConfig.indexerUrl, regRes.txHash, 45000);
             } catch {}
           }
         }
       } else {
         if (!wallet.isSimulated) {
-          throw new Error('1AM Wallet connection is required to deploy on Midnight Preprod.');
+          throw new Error('1AM Wallet connection is required to call contract on Midnight Preprod.');
         }
         await new Promise((r) => setTimeout(r, 1200));
         txHash = generateRandomHex32();
       }
 
-      saveOrganizerSecret(contractAddress, organizerSecretHex);
-      savePersistedAllocations(contractAddress, newAllocations);
+      saveOrganizerSecret(targetContract, organizerSecretHex);
 
-      setVaultState({
-        organizerKey: organizerKeyHex,
-        distributionId: distIdHex,
-        title: title || 'Confidential Distribution Batch',
-        totalVaultFunds: totalFunds,
-        commitments: newCommitments,
-        claimedNullifiers: [],
-        claimedCount: 0,
-        isClosed: false,
-        allocations: newAllocations,
-        contractAddress,
+      setVaultState((prev) => {
+        const mergedAllocations = [...(prev?.allocations || []), ...newAllocations];
+        const mergedCommitments = Array.from(new Set([...(prev?.commitments || []), ...newCommitments]));
+        const updated = {
+          organizerKey: organizerKeyHex,
+          distributionId: distIdHex,
+          title: title || prev?.title || 'Confidential Distribution Vault',
+          totalVaultFunds: (prev?.totalVaultFunds || 0n) + totalFunds,
+          commitments: mergedCommitments,
+          claimedNullifiers: prev?.claimedNullifiers || [],
+          claimedCount: prev?.claimedCount || 0,
+          isClosed: prev?.isClosed || false,
+          allocations: mergedAllocations,
+          contractAddress: targetContract,
+        };
+        savePersistedAllocations(targetContract, updated.allocations);
+        return updated;
       });
 
-      return { contractAddress, txHash };
+      return { contractAddress: targetContract, txHash };
     } finally {
       setIsProving(false);
       setProvingStep('');

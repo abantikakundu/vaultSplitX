@@ -32,6 +32,8 @@ export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { createDistributionBatch, vaultState, isProving, provingStep } = useVault();
   const wallet = useWallet();
+  const targetContractAddress =
+    vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
@@ -248,7 +250,34 @@ export const CreatePage: React.FC = () => {
       </section>
 
       {/* Main Two-Column Body */}
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 space-y-6">
+        {/* Target Midnight Smart Contract Banner */}
+        <div className="p-4 rounded-lg bg-surface border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-text">Target Midnight Smart Contract:</span>
+                <span className="font-mono text-sky-400 font-semibold break-all">
+                  0x{targetContractAddress.replace(/^0x/, '')}
+                </span>
+              </div>
+              <p className="text-muted text-[11px] mt-0.5">
+                Submitting this distribution prompts your connected 1AM wallet to execute the on-chain smart contract function <code className="text-sky-300 font-mono">registerAllocation</code>.
+              </p>
+            </div>
+          </div>
+          <a
+            href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 text-sky-400 hover:text-sky-300 font-semibold no-underline"
+          >
+            <span>View on 1AM Explorer</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+
         {/* Step Tab Strip */}
         <div className="step-tab-strip" role="tablist">
           <button
@@ -635,34 +664,56 @@ export const CreatePage: React.FC = () => {
               )}
 
               {submitSuccess && (
-                <div className="p-6 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm space-y-4">
+                <div className="p-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm space-y-4">
                   <div className="flex items-center gap-2 font-bold text-base">
                     <Check size={20} />
-                    <span>Distribution successfully created and registered on Midnight Preprod!</span>
+                    <span>Allocations Registered on Midnight Preprod Smart Contract!</span>
                   </div>
                   <p className="text-xs text-emerald-300">
-                    Opaque commitments have been published to the Midnight ledger. Recipients can now privately claim their allocations with ZK proofs.
+                    Opaque commitments have been published to the Midnight ledger on smart contract <code className="text-white font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>. Recipients can now privately claim their allocations with ZK proofs.
                   </p>
 
-                  {createdResult?.txHash && (
-                    <div className="p-3 bg-surface border border-border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Contract Address Block */}
+                    <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
                       <div>
-                        <span className="text-muted text-[11px] block font-sans">Transaction Hash:</span>
+                        <span className="text-muted text-[11px] block font-sans">Smart Contract:</span>
                         <span className="font-mono text-text break-all">
-                          0x{createdResult.txHash.replace(/^0x/, '')}
+                          0x{targetContractAddress.replace(/^0x/, '')}
                         </span>
                       </div>
                       <a
-                        href={getExplorerTxUrl(createdResult.txHash, wallet.network || 'preprod')}
+                        href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                        className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-sky-400"
                       >
-                        <span>View on 1AM Explorer</span>
-                        <ExternalLink size={13} />
+                        <span>Contract on Explorer</span>
+                        <ExternalLink size={12} />
                       </a>
                     </div>
-                  )}
+
+                    {/* Transaction Hash Block */}
+                    {createdResult?.txHash && (
+                      <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
+                        <div>
+                          <span className="text-muted text-[11px] block font-sans">Transaction Hash (Contract Call):</span>
+                          <span className="font-mono text-text break-all">
+                            0x{createdResult.txHash.replace(/^0x/, '')}
+                          </span>
+                        </div>
+                        <a
+                          href={getExplorerTxUrl(createdResult.txHash, wallet.network || 'preprod')}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                        >
+                          <span>Tx on 1AM Explorer</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="pt-2">
                     <Link to="/vault" className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5">
@@ -675,7 +726,7 @@ export const CreatePage: React.FC = () => {
 
               {/* Submit CTA */}
               {!submitSuccess && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <button
                     type="submit"
                     disabled={isSubmitting || !isAllocationBalanced}
@@ -689,10 +740,13 @@ export const CreatePage: React.FC = () => {
                     ) : (
                       <>
                         <ShieldCheck size={16} />
-                        <span>Deploy & Register Distribution</span>
+                        <span>Deploy & Register to Contract (1AM Wallet)</span>
                       </>
                     )}
                   </button>
+                  <p className="text-[11px] text-muted">
+                    Prompts 1AM wallet to execute <code className="text-sky-400 font-mono">registerAllocation</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>.
+                  </p>
                 </div>
               )}
             </div>
@@ -746,6 +800,20 @@ export const CreatePage: React.FC = () => {
                       Preprod
                     </span>
                   </div>
+                </div>
+
+                {/* Target Contract in Preview */}
+                <div className="py-2.5 px-3 bg-surface border border-border rounded text-[11px] font-mono flex items-center justify-between">
+                  <span className="text-muted">Contract:</span>
+                  <a
+                    href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>0x{targetContractAddress.slice(0, 6)}...{targetContractAddress.slice(-4)}</span>
+                    <ExternalLink size={10} />
+                  </a>
                 </div>
 
                 {/* Built-in Privacy Checklist */}
