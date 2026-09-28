@@ -26,6 +26,7 @@ export interface MidnightWalletState {
   walletName: string | null;
   installedWallets: WalletOption[];
   connectedApi: ConnectedAPI | null;
+  showWalletModal: boolean;
 }
 
 export function useMidnight() {
@@ -42,7 +43,16 @@ export function useMidnight() {
     walletName: null,
     installedWallets: [],
     connectedApi: null,
+    showWalletModal: false,
   });
+
+  const openWalletModal = useCallback(() => {
+    setWalletState((prev) => ({ ...prev, showWalletModal: true }));
+  }, []);
+
+  const closeWalletModal = useCallback(() => {
+    setWalletState((prev) => ({ ...prev, showWalletModal: false }));
+  }, []);
 
   // Scan installed wallets
   const updateInstalledWallets = useCallback(() => {
@@ -63,7 +73,7 @@ export function useMidnight() {
       updateInstalledWallets();
     });
 
-    // Auto-reconnect
+    // Auto-reconnect real wallets only
     autoReconnectMidnightWallet('preprod')
       .then((savedWallet) => {
         if (savedWallet) {
@@ -74,7 +84,7 @@ export function useMidnight() {
             address: savedWallet.address,
             walletId: savedWallet.id,
             walletName: savedWallet.name,
-            balance: savedWallet.dustBalance ?? (savedWallet.isDemo ? 250_000n : 100_000n),
+            balance: savedWallet.dustBalance ?? 100_000n,
             connectedApi: savedWallet.connectedApi ?? null,
             error: null,
           }));
@@ -86,14 +96,13 @@ export function useMidnight() {
   }, [updateInstalledWallets]);
 
   const connectWallet = useCallback(
-    async (preferSimulationOrWalletId: boolean | string = false) => {
+    async (preferSimulationOrWalletId: boolean | string = false): Promise<ConnectedWallet | null> => {
       setWalletState((prev) => ({ ...prev, isConnecting: true, error: null }));
 
       try {
-        // Explicit simulation requested
+        // Explicit simulation requested by user
         if (preferSimulationOrWalletId === true || preferSimulationOrWalletId === 'demo') {
           const demoWallet = createDemoWallet('preprod');
-          saveConnectedWalletId(demoWallet.id);
           setWalletState((prev) => ({
             ...prev,
             isConnected: true,
@@ -105,21 +114,33 @@ export function useMidnight() {
             balance: 250_000n,
             connectedApi: null,
             error: null,
+            showWalletModal: false,
           }));
-          return;
+          return demoWallet;
         }
 
-        // Check installed extensions
-        await waitForMidnightExtensions(undefined, 1500);
+        // Wait up to 2500ms for Midnight wallet extension to inject into window.midnight
+        await waitForMidnightExtensions(undefined, 2500);
         const installed = listInstalledWallets();
 
         let targetId: string | null = null;
-        if (typeof preferSimulationOrWalletId === 'string' && preferSimulationOrWalletId !== '') {
+        if (typeof preferSimulationOrWalletId === 'string' && preferSimulationOrWalletId !== '' && preferSimulationOrWalletId !== 'demo') {
           targetId = preferSimulationOrWalletId;
         } else if (installed.length > 0) {
           // Prefer 1AM wallet if present, otherwise first available
-          const oneAm = installed.find((w) => w.id.includes('1am') || w.name.toLowerCase().includes('1am'));
+          const oneAm = installed.find((w) =>
+            w.id.toLowerCase().includes('1am') ||
+            w.id.toLowerCase().includes('oneam') ||
+            w.name.toLowerCase().includes('1am') ||
+            w.name.toLowerCase().includes('oneam')
+          );
           targetId = oneAm ? oneAm.id : installed[0].id;
+        } else if (typeof window !== 'undefined' && window.midnight) {
+          const keys = Object.keys(window.midnight);
+          if (keys.length > 0) {
+            const oneAmKey = keys.find((k) => k.toLowerCase().includes('1am') || k.toLowerCase().includes('oneam'));
+            targetId = oneAmKey || keys[0];
+          }
         }
 
         if (targetId && window.midnight?.[targetId]) {
@@ -137,25 +158,20 @@ export function useMidnight() {
             balance: connected.dustBalance ?? 100_000n,
             connectedApi: connected.connectedApi ?? null,
             error: null,
+            showWalletModal: false,
           }));
-          return;
+          return connected;
         }
 
-        // If no real extension is installed, inform and fallback to simulator demo
-        const demoWallet = createDemoWallet('preprod');
-        saveConnectedWalletId(demoWallet.id);
+        // If no real extension is installed, inform and open wallet modal
+        const errMsg = '1AM Wallet extension not detected. Please ensure 1AM Wallet is installed in Chrome/Brave and unlocked.';
         setWalletState((prev) => ({
           ...prev,
-          isConnected: true,
           isConnecting: false,
-          isSimulated: true,
-          address: demoWallet.address,
-          walletId: demoWallet.id,
-          walletName: 'Midnight Demo Simulator',
-          balance: 250_000n,
-          connectedApi: null,
-          error: null,
+          error: errMsg,
+          showWalletModal: true,
         }));
+        throw new Error(errMsg);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to connect Midnight wallet';
         setWalletState((prev) => ({
@@ -181,6 +197,7 @@ export function useMidnight() {
       walletName: null,
       connectedApi: null,
       error: null,
+      showWalletModal: false,
     }));
   }, []);
 
@@ -200,5 +217,7 @@ export function useMidnight() {
     connectWallet,
     disconnectWallet,
     refreshBalance,
+    openWalletModal,
+    closeWalletModal,
   };
 }

@@ -4,6 +4,7 @@ import { Navbar } from './Navbar';
 import { ProtocolStatusStrip } from './ProtocolStatusStrip';
 import { Footer } from './Footer';
 import { MobileDrawer } from './MobileDrawer';
+import { WalletModal } from './WalletModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -44,6 +45,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {/* 5. Editorial Footer */}
       <Footer />
+
+      {/* 6. Wallet Connection Modal */}
+      <WalletModal />
     </div>
   );
 };

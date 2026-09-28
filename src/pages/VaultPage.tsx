@@ -64,7 +64,12 @@ export const VaultPage: React.FC = () => {
     setAddError(null);
 
     try {
-      await registerAllocation(newRole || 'Contributor', BigInt(newAmount), newSeed);
+      let activeApi = wallet.connectedApi;
+      if (!activeApi || wallet.isSimulated) {
+        const connected = await wallet.connectWallet(false);
+        activeApi = connected?.connectedApi ?? null;
+      }
+      await registerAllocation(newRole || 'Contributor', BigInt(newAmount), newSeed, activeApi);
       setNewRole('');
       setNewAmount('');
       setNewSeed('');
@@ -82,7 +87,14 @@ export const VaultPage: React.FC = () => {
     }
     setIsClosing(true);
     try {
-      await closeDistribution();
+      let activeApi = wallet.connectedApi;
+      if (!activeApi || wallet.isSimulated) {
+        const connected = await wallet.connectWallet(false);
+        activeApi = connected?.connectedApi ?? null;
+      }
+      await closeDistribution(activeApi);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to close distribution.');
     } finally {
       setIsClosing(false);
     }

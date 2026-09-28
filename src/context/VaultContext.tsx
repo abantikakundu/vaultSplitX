@@ -19,6 +19,7 @@ import {
   deployDistributionOnChain,
   waitForTxConfirmation,
 } from '../midnight/contract';
+import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { getOrganizerSecret, saveOrganizerSecret } from '../midnight/crypto';
 
 interface VaultContextValue {
@@ -26,20 +27,27 @@ interface VaultContextValue {
   isLoadingVault: boolean;
   isSyncing: boolean;
   refreshVaultState: () => Promise<void>;
-  registerAllocation: (role: string, amount: bigint, seed?: string) => Promise<{ txHash?: string; commitment: string }>;
+  registerAllocation: (
+    role: string,
+    amount: bigint,
+    seed?: string,
+    overrideApi?: ConnectedAPI | null,
+  ) => Promise<{ txHash?: string; commitment: string }>;
   createDistributionBatch: (
     title: string,
     totalFunds: bigint,
-    allocationsList: Array<{ role: string; amount: bigint; seed?: string }>
+    allocationsList: Array<{ role: string; amount: bigint; seed?: string }>,
+    overrideApi?: ConnectedAPI | null,
   ) => Promise<{ contractAddress?: string; txHash?: string }>;
   claimPayout: (
     recipientSecret: string,
     amount: bigint,
     salt: string,
     distId: string,
-    claimSpendSecret?: string
+    claimSpendSecret?: string,
+    overrideApi?: ConnectedAPI | null,
   ) => Promise<ClaimVerificationResult>;
-  closeDistribution: () => Promise<{ txHash?: string }>;
+  closeDistribution: (overrideApi?: ConnectedAPI | null) => Promise<{ txHash?: string }>;
   isProving: boolean;
   provingStep: string;
   claimResult: ClaimVerificationResult | null;
@@ -174,6 +182,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     role: string,
     amount: bigint,
     seed?: string,
+    overrideApi?: ConnectedAPI | null,
   ): Promise<{ txHash?: string; commitment: string }> => {
     if (!vaultState) throw new Error('Vault state is not loaded');
     if (vaultState.isClosed) throw new Error('Cannot register allocations to a closed distribution');
@@ -198,17 +207,18 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const commHex = bytesToHex(commBytes);
 
       let txHash: string | undefined;
+      const activeApi = overrideApi ?? (wallet.isSimulated ? null : wallet.connectedApi);
 
       // If real 1AM wallet is connected, execute real on-chain transaction!
-      if (wallet.connectedApi && !wallet.isSimulated) {
+      if (activeApi) {
         const netConfig = getNetworkConfig(wallet.network || 'preprod');
         const organizerSecretHex =
           getOrganizerSecret(vaultState.contractAddress) ||
           netConfig.defaultOrganizer.organizerSecretHex;
 
-        setProvingStep('Synthesizing registerAllocation ZK proof via 1AM wallet...');
+        setProvingStep('Prompting 1AM wallet: Synthesizing registerAllocation ZK proof...');
         const res = await registerAllocationOnChain(
-          wallet.connectedApi,
+          activeApi,
           vaultState.contractAddress,
           commHex,
           organizerSecretHex,
@@ -227,6 +237,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           // If confirmation poll timed out, proceed
         }
       } else {
+        if (!wallet.isSimulated) {
+          throw new Error('1AM Wallet connection is required to register allocations on Midnight Preprod.');
+        }
         // Simulation mode
         setProvingStep('Simulating registerAllocation circuit execution...');
         await new Promise((r) => setTimeout(r, 1200));
@@ -273,6 +286,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     salt: string,
     distId: string,
     claimSpendSecret?: string,
+    overrideApi?: ConnectedAPI | null,
   ): Promise<ClaimVerificationResult> => {
     if (!vaultState) throw new Error('Vault state not initialized');
     if (vaultState.isClosed) throw new Error('Distribution is closed');
@@ -321,14 +335,15 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       let txHash: string | undefined;
+      const activeApi = overrideApi ?? (wallet.isSimulated ? null : wallet.connectedApi);
 
       // Real 1AM wallet transaction submission
-      if (wallet.connectedApi && !wallet.isSimulated) {
+      if (activeApi) {
         const netConfig = getNetworkConfig(wallet.network || 'preprod');
         setProvingStep('[4/4] Executing claimPayout circuit & synthesizing ZK proof in 1AM wallet...');
 
         const res = await claimPayoutOnChain(
-          wallet.connectedApi,
+          activeApi,
           vaultState.contractAddress,
           distId,
           recSecretBytes,
@@ -348,6 +363,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await waitForTxConfirmation(netConfig.indexerUrl, txHash, 45000);
         } catch {}
       } else {
+        if (!wallet.isSimulated) {
+          throw new Error('1AM Wallet connection is required to claim on Midnight Preprod.');
+        }
         // Simulation mode
         setProvingStep('[4/4] Simulating on-chain claim submission...');
         await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -392,13 +410,14 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // -------------------------------------------------------------------------
   // Close Distribution (Organizer Only)
   // -------------------------------------------------------------------------
-  const closeDistribution = async (): Promise<{ txHash?: string }> => {
+  const closeDistribution = async (overrideApi?: ConnectedAPI | null): Promise<{ txHash?: string }> => {
     if (!vaultState) throw new Error('Vault state not initialized');
     setIsProving(true);
     try {
       let txHash: string | undefined;
+      const activeApi = overrideApi ?? (wallet.isSimulated ? null : wallet.connectedApi);
 
-      if (wallet.connectedApi && !wallet.isSimulated) {
+      if (activeApi) {
         const netConfig = getNetworkConfig(wallet.network || 'preprod');
         const organizerSecretHex =
           getOrganizerSecret(vaultState.contractAddress) ||
@@ -406,7 +425,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         setProvingStep('Submitting closeDistribution transaction to Midnight via 1AM wallet...');
         const res = await closeDistributionOnChain(
-          wallet.connectedApi,
+          activeApi,
           vaultState.contractAddress,
           organizerSecretHex,
           wallet.network || 'preprod',
@@ -416,6 +435,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setLastTxHash(txHash);
         setLastTxExplorerUrl(getExplorerTxUrl(txHash, wallet.network || 'preprod'));
       } else {
+        if (!wallet.isSimulated) {
+          throw new Error('1AM Wallet connection is required to close distribution on Midnight Preprod.');
+        }
         await new Promise((r) => setTimeout(r, 1000));
         txHash = generateRandomHex32();
       }
@@ -435,6 +457,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     title: string,
     totalFunds: bigint,
     allocationsList: Array<{ role: string; amount: bigint; seed?: string }>,
+    overrideApi?: ConnectedAPI | null,
   ): Promise<{ contractAddress?: string; txHash?: string }> => {
     setIsProving(true);
     try {
@@ -481,12 +504,14 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       let contractAddress = vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
       let txHash: string | undefined;
 
+      const activeApi = overrideApi ?? (wallet.isSimulated ? null : wallet.connectedApi);
+
       // Deploy real contract on Midnight if 1AM wallet is connected
-      if (wallet.connectedApi && !wallet.isSimulated) {
-        setProvingStep('Prompting 1AM wallet to deploy new VaultSplitX contract on Midnight Preprod...');
+      if (activeApi) {
+        setProvingStep('Prompting 1AM wallet: Deploying VaultSplitX distribution contract on Midnight Preprod...');
         try {
           const deployRes = await deployDistributionOnChain(
-            wallet.connectedApi,
+            activeApi,
             organizerKeyHex,
             distIdHex,
             totalFunds,
@@ -500,10 +525,10 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           // Register allocations sequentially on-chain
           for (let i = 0; i < newCommitments.length; i++) {
-            setProvingStep(`Registering allocation ${i + 1}/${newCommitments.length} on-chain...`);
+            setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] Prompting 1AM wallet to register commitment...`);
             try {
               const regRes = await registerAllocationOnChain(
-                wallet.connectedApi,
+                activeApi,
                 contractAddress,
                 newCommitments[i],
                 organizerSecretHex,
@@ -516,15 +541,15 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           }
         } catch (depErr) {
-          console.warn('Direct on-chain contract deployment error, will attach to existing contract:', depErr);
-          // If deploy failed (e.g., balance), fall back to registering on existing master contract
+          console.warn('Direct on-chain contract deployment fallback to existing contract:', depErr);
+          // If deploy failed (e.g., balance or gas limits), fall back to registering on existing master contract
           for (let i = 0; i < newCommitments.length; i++) {
-            setProvingStep(`Registering allocation ${i + 1}/${newCommitments.length} on deployed contract...`);
+            setProvingStep(`[Allocation ${i + 1}/${newCommitments.length}] Registering commitment on deployed contract via 1AM wallet...`);
             try {
               const netConfig = getNetworkConfig(wallet.network || 'preprod');
               const defaultOrgSecret = getOrganizerSecret(contractAddress) || netConfig.defaultOrganizer.organizerSecretHex;
               const regRes = await registerAllocationOnChain(
-                wallet.connectedApi,
+                activeApi,
                 contractAddress,
                 newCommitments[i],
                 defaultOrgSecret,
@@ -537,6 +562,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       } else {
+        if (!wallet.isSimulated) {
+          throw new Error('1AM Wallet connection is required to deploy on Midnight Preprod.');
+        }
         await new Promise((r) => setTimeout(r, 1200));
         txHash = generateRandomHex32();
       }

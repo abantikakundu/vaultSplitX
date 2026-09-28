@@ -149,6 +149,23 @@ export const CreatePage: React.FC = () => {
     setSubmitError(null);
 
     try {
+      // 1. Ensure real 1AM wallet is connected. Prompt 1AM wallet if disconnected or in demo mode!
+      let activeApi = wallet.connectedApi;
+      if (!activeApi || wallet.isSimulated) {
+        try {
+          const connected = await wallet.connectWallet(false);
+          if (!connected?.connectedApi) {
+            throw new Error('1AM Wallet connection was not completed. Please approve connection in your 1AM wallet.');
+          }
+          activeApi = connected.connectedApi;
+        } catch (connErr) {
+          const cMsg = (connErr as Error)?.message || '1AM Wallet connection failed or was rejected.';
+          setSubmitError(cMsg);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Map to computed tDUST amounts
       const allocationsPayload = recipients.map((r) => {
         let finalAmount = 0n;
@@ -170,7 +187,7 @@ export const CreatePage: React.FC = () => {
         };
       });
 
-      const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload);
+      const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload, activeApi);
       setCreatedResult(res);
       setSubmitSuccess(true);
     } catch (err: unknown) {
@@ -582,9 +599,38 @@ export const CreatePage: React.FC = () => {
 
               {/* Feedback States */}
               {submitError && (
-                <div className="p-4 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-                  <AlertCircle size={16} className="shrink-0" />
-                  <span>{submitError}</span>
+                <div className="p-4 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{submitError}</span>
+                  </div>
+                  {submitError.toLowerCase().includes('not detected') && (
+                    <div className="pt-1 flex flex-wrap items-center gap-2">
+                      <a
+                        href="https://1am.xyz"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
+                      >
+                        <span>Install 1AM Wallet</span>
+                        <ExternalLink size={13} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => wallet.connectWallet(false)}
+                        className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
+                      >
+                        Retry Connection
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => wallet.connectWallet('demo')}
+                        className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
+                      >
+                        or switch to Demo Simulator
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -633,12 +679,12 @@ export const CreatePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting || !isAllocationBalanced}
-                    className="btn-pill btn-pill-sky py-3.5 px-8 text-sm font-bold w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="btn-pill btn-pill-sky py-3.5 px-8 text-sm font-bold w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        <span>Registering Commitments to Midnight...</span>
+                        <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
                       </>
                     ) : (
                       <>

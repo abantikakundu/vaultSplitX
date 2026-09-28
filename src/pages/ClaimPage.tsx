@@ -20,6 +20,7 @@ import { ContributorAllocation, generateRandomHex32 } from '../utils/contract';
 
 export const ClaimPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const wallet = useWallet();
   const { vaultState, claimPayout, isProving, provingStep, claimResult, claimError, clearClaimState } = useVault();
 
   // Form Fields (Preserving existing field semantics)
@@ -74,7 +75,12 @@ export const ClaimPage: React.FC = () => {
     }
 
     try {
-      await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret);
+      let activeApi = wallet.connectedApi;
+      if (!activeApi || wallet.isSimulated) {
+        const connected = await wallet.connectWallet(false);
+        activeApi = connected?.connectedApi ?? null;
+      }
+      await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret, activeApi);
     } catch {
       // Handled in context
     }

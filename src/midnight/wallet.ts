@@ -26,13 +26,21 @@ declare global {
 }
 
 export const listInstalledWallets = (): WalletOption[] => {
-  if (typeof window === 'undefined') return [];
-  return Object.entries(window.midnight ?? {}).map(([id, wallet]) => ({
-    id,
-    name: wallet.name || id,
-    apiVersion: wallet.apiVersion || '1.0.0',
-    icon: wallet.icon,
-  }));
+  if (typeof window === 'undefined' || !window.midnight) return [];
+  return Object.entries(window.midnight).map(([id, wallet]) => {
+    let displayName = wallet.name || id;
+    if (id.toLowerCase().includes('1am') || id.toLowerCase().includes('oneam')) {
+      displayName = '1AM Wallet';
+    } else if (id.toLowerCase().includes('lace')) {
+      displayName = 'Midnight Lace';
+    }
+    return {
+      id,
+      name: displayName,
+      apiVersion: wallet.apiVersion || '1.0.0',
+      icon: wallet.icon,
+    };
+  });
 };
 
 export const connectMidnightWallet = async (
@@ -64,9 +72,14 @@ export const connectMidnightWallet = async (
     // Optional
   }
 
+  let displayName = wallet.name || walletId;
+  if (walletId.toLowerCase().includes('1am') || walletId.toLowerCase().includes('oneam')) {
+    displayName = '1AM Wallet';
+  }
+
   return {
     id: walletId,
-    name: wallet.name || walletId,
+    name: displayName,
     address: unshieldedAddress,
     network,
     isDemo: false,
@@ -111,6 +124,8 @@ export const getSavedWalletId = (): string | null => {
 export const saveConnectedWalletId = (walletId: string): void => {
   if (typeof window === 'undefined') return;
   try {
+    // Never persist demo wallet as auto-reconnect target
+    if (walletId.startsWith('demo-')) return;
     localStorage.setItem(STORAGE_KEY_CONNECTED_WALLET, walletId);
   } catch {}
 };
@@ -156,7 +171,8 @@ export const autoReconnectMidnightWallet = async (
   if (!savedId) return null;
 
   if (savedId.startsWith('demo-')) {
-    return createDemoWallet(network);
+    clearSavedWalletId();
+    return null;
   }
 
   // Wait for extension to inject
