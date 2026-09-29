@@ -15,6 +15,8 @@ import {
   Vault,
   FileCheck,
   CheckCircle2,
+  KeyRound,
+  Globe,
 } from 'lucide-react';
 import { TiltedCard } from '../components/common/TiltedCard';
 import { InfoTooltip } from '../components/common/InfoTooltip';
@@ -105,85 +107,92 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. HOW IT WORKS: 4 NUMBERED STEPS */}
-      <section className="max-w-7xl mx-auto px-6 space-y-12" aria-labelledby="how-it-works-heading">
+      {/* 2. HOW IT WORKS: 3 STEPS WITH ICONS */}
+      <section id="how-it-works" className="max-w-7xl mx-auto px-6 space-y-12" aria-labelledby="how-it-works-heading">
         <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-widest font-bold text-sky-400 mb-2">
               Protocol Workflow
             </div>
             <h2 id="how-it-works-heading" className="font-display text-3xl sm:text-4xl font-extrabold text-text tracking-tight">
-              How VaultSplitX Operates
+              How It Works
             </h2>
           </div>
           <p className="text-muted text-sm max-w-md">
-            Four deterministic stages separating organizer treasury funding from client-side zero-knowledge entitlement claims.
+            Three deterministic stages separating organizer treasury funding from confidential client-side zero-knowledge entitlement claims.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Step 01 */}
           <div className="sharp-card p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              <span className="font-display font-extrabold text-3xl text-sky-400">01</span>
-              <h3 className="font-bold text-lg text-text">Create Distribution</h3>
+              <div className="flex items-center justify-between">
+                <span className="font-display font-extrabold text-3xl text-sky-400">01</span>
+                <div className="w-10 h-10 rounded bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400">
+                  <Vault size={20} />
+                </div>
+              </div>
+              <h3 className="font-bold text-lg text-text">
+                Organizer deposits funds and sets private allocations
+              </h3>
               <p className="text-sm text-muted leading-relaxed">
-                The organizer registers opaque 32-byte cryptographic commitments <InfoTooltip term="commitment" /> for each recipient on the Midnight ledger.
+                The organizer deposits aggregate funds into the smart contract vault <InfoTooltip term="vault" /> and registers opaque 32-byte cryptographic commitments <InfoTooltip term="commitment" /> for each recipient. Individual payment amounts and recipient identities are never stored on the public ledger.
               </p>
             </div>
-            <div className="pt-4 border-t border-border text-xs font-mono text-muted">
-              registerAllocation()
+            <div className="pt-4 border-t border-border text-xs font-mono text-muted flex items-center justify-between">
+              <span>registerAllocation()</span>
+              <span className="text-sky-400">totalVaultFunds</span>
             </div>
           </div>
 
           {/* Step 02 */}
           <div className="sharp-card p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              <span className="font-display font-extrabold text-3xl text-sky-400">02</span>
-              <h3 className="font-bold text-lg text-text inline-flex items-center gap-1.5">
-                <span>Fund the Vault</span>
-                <InfoTooltip term="vault" />
+              <div className="flex items-center justify-between">
+                <span className="font-display font-extrabold text-3xl text-pink-400">02</span>
+                <div className="w-10 h-10 rounded bg-pink-400/10 border border-pink-400/30 flex items-center justify-center text-pink-400">
+                  <KeyRound size={20} />
+                </div>
+              </div>
+              <h3 className="font-bold text-lg text-text">
+                Recipients get a private claim key
               </h3>
               <p className="text-sm text-muted leading-relaxed">
-                Aggregate distribution funds are locked in the smart contract vault <InfoTooltip term="vault" />. Only the total pool balance is visible on-chain.
+                Each recipient securely receives their private entitlement secret and unique claim key off-chain. A 256-bit cryptographic blinding salt <InfoTooltip term="salt" /> protects against dictionary attacks and guarantees that only the authorized recipient can construct a valid claim.
               </p>
             </div>
-            <div className="pt-4 border-t border-border text-xs font-mono text-muted">
-              totalVaultFunds: Uint64
+            <div className="pt-4 border-t border-border text-xs font-mono text-muted flex items-center justify-between">
+              <span>recipientSecret</span>
+              <span className="text-pink-400">claimSecret</span>
             </div>
           </div>
 
           {/* Step 03 */}
           <div className="sharp-card p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              <span className="font-display font-extrabold text-3xl text-sky-400">03</span>
-              <h3 className="font-bold text-lg text-text">Recipients Claim Privately</h3>
+              <div className="flex items-center justify-between">
+                <span className="font-display font-extrabold text-3xl text-emerald-400">03</span>
+                <div className="w-10 h-10 rounded bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+              <h3 className="font-bold text-lg text-text">
+                Recipients claim with a zero-knowledge proof
+              </h3>
               <p className="text-sm text-muted leading-relaxed">
-                Each participant synthesizes a ZK proof in their browser, proving entitlement without disclosing their identity or amount.
+                Recipients synthesize a zero-knowledge proof directly in their browser. The Midnight contract verifies entitlement and burns an un-linkable nullifier <InfoTooltip term="nullifier" />, releasing payout funds without disclosing who claimed or what amount was disbursed.
               </p>
             </div>
-            <div className="pt-4 border-t border-border text-xs font-mono text-muted">
-              claimPayout(distId)
-            </div>
-          </div>
-
-          {/* Step 04 */}
-          <div className="sharp-card p-6 flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
-              <span className="font-display font-extrabold text-3xl text-sky-400">04</span>
-              <h3 className="font-bold text-lg text-text">Anyone Verifies</h3>
-              <p className="text-sm text-muted leading-relaxed">
-                Observers verify the proof validity and spent nullifier <InfoTooltip term="nullifier" /> to ensure accounting consistency and prevent double claims.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-border text-xs font-mono text-muted">
-              claimedNullifiers.member()
+            <div className="pt-4 border-t border-border text-xs font-mono text-muted flex items-center justify-between">
+              <span>claimPayout()</span>
+              <span className="text-emerald-400">claimedNullifiers</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. PRIVACY MODEL (3 SHARP CARDS) */}
+      {/* 3. TWO-COLUMN "PUBLIC VS PRIVATE" CARD BASED ON README PRIVACY MODEL */}
       <section id="privacy-model" className="max-w-7xl mx-auto px-6 space-y-12" aria-labelledby="privacy-heading">
         <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -191,7 +200,7 @@ export const HomePage: React.FC = () => {
               Cryptographic Boundary
             </div>
             <h2 id="privacy-heading" className="font-display text-3xl sm:text-4xl font-extrabold text-text tracking-tight">
-              Dual-State Privacy Model
+              Public vs Private Privacy Model
             </h2>
           </div>
           <p className="text-muted text-sm max-w-md">
@@ -199,125 +208,188 @@ export const HomePage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1: Public on-chain */}
-          <div className="sharp-card p-7 space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-sky-400 font-mono">01 / Public</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-400/10 text-sky-400 border border-sky-400/30">
-                On-Chain Ledger
+        {/* Two-Column Card */}
+        <div className="sharp-card overflow-hidden">
+          {/* Card Top Header */}
+          <div className="p-6 md:p-8 bg-surface-hover/40 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-400">
+                Midnight Dual-State Ledger Architecture
+              </span>
+              <h3 className="font-display text-xl sm:text-2xl font-bold text-text">
+                Public Transparency vs. Private Zero-Knowledge Witness
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-sky-400/10 text-sky-400 border border-sky-400/30">
+                Dual-State Compact
               </span>
             </div>
-
-            <div>
-              <h3 className="font-display text-2xl font-bold text-text">Public On-Chain</h3>
-              <p className="text-xs text-muted mt-1">
-                Visible to every observer and block explorer:
-              </p>
-            </div>
-
-            <ul className="space-y-2.5 text-xs text-muted list-none p-0">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Organizer public verification key (<code className="font-mono text-text">organizer</code>)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Unique distribution batch ID (<code className="font-mono text-text">distributionId</code>) <InfoTooltip term="distribution ID" /></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Total aggregate funds locked in the vault (<code className="font-mono text-text">totalVaultFunds</code>) <InfoTooltip term="vault" /></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Set of 32-byte opaque allocation commitments (<code className="font-mono text-text">allocationCommitments</code>) <InfoTooltip term="commitment" /></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Set of spent claim nullifiers (<code className="font-mono text-text">claimedNullifiers</code>) <InfoTooltip term="nullifier" /></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Settled claim counter & distribution lifecycle status</span>
-              </li>
-            </ul>
           </div>
 
-          {/* Card 2: Private Witness */}
-          <div className="sharp-card p-7 space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-pink-400 font-mono">02 / Private</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-pink-400/10 text-pink-400 border border-pink-400/30">
-                Client Witness
-              </span>
-            </div>
+          {/* Two-Column Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Column 1: What is PUBLIC */}
+            <div className="p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400">
+                    <Globe size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-display text-xl font-bold text-text">What is PUBLIC</h4>
+                    <span className="text-xs text-sky-400 font-mono">On-chain, anyone can see</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-400/10 text-sky-400 border border-sky-400/30 font-mono">
+                  On-Chain
+                </span>
+              </div>
 
-            <div>
-              <h3 className="font-display text-2xl font-bold text-text">Private Witness</h3>
-              <p className="text-xs text-muted mt-1">
-                Client-side secrets never written to the ledger:
+              <p className="text-xs text-muted leading-relaxed">
+                Immutable ledger parameters recorded on the Midnight blockchain, visible to every observer and block explorer:
               </p>
+
+              <ul className="space-y-3.5 text-xs text-muted list-none p-0">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The organizer's public verification key (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">organizer</code>)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The unique distribution batch identifier (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">distributionId</code>) <InfoTooltip term="distribution ID" />
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The total aggregate funds deposited into the vault (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">totalVaultFunds</code>) <InfoTooltip term="vault" />
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The set of 32-byte opaque allocation commitments (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">allocationCommitments</code>) <InfoTooltip term="commitment" />
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The set of spent claim nullifiers used to prevent replay attacks (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">claimedNullifiers</code>) <InfoTooltip term="nullifier" />
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The public counter of successfully settled claims (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">claimedCount</code>)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                  <span>
+                    The open/closed lifecycle status flag (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">isClosed</code>)
+                  </span>
+                </li>
+              </ul>
             </div>
 
-            <ul className="space-y-2.5 text-xs text-muted list-none p-0">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Participant private entitlement key (<code className="font-mono text-text">recipientSecret</code>)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Individual payment amount (<code className="font-mono text-text">allocatedAmount</code>)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>256-bit cryptographic blinding salt (<code className="font-mono text-text">allocationSalt</code>) <InfoTooltip term="salt" /></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Claimant private spending key (<code className="font-mono text-text">claimSecret</code>)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Organizer administrative signing key (<code className="font-mono text-text">organizerSecret</code>)</span>
-              </li>
-            </ul>
+            {/* Column 2: What is PRIVATE */}
+            <div className="p-6 md:p-8 space-y-6 border-t md:border-t-0 md:border-l border-border bg-surface/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded bg-pink-400/10 border border-pink-400/30 flex items-center justify-center text-pink-400">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-display text-xl font-bold text-text">What is PRIVATE</h4>
+                    <span className="text-xs text-pink-400 font-mono">Private witness, never on-chain</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-pink-400/10 text-pink-400 border border-pink-400/30 font-mono">
+                  Off-Chain
+                </span>
+              </div>
+
+              <p className="text-xs text-muted leading-relaxed">
+                Client-side secrets and witness inputs that are never published to the ledger or revealed to external observers:
+              </p>
+
+              <ul className="space-y-3.5 text-xs text-muted list-none p-0">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-pink-400 mt-0.5 shrink-0" />
+                  <span>
+                    The recipient's private identity secret (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">recipientSecret</code>)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-pink-400 mt-0.5 shrink-0" />
+                  <span>
+                    The individual payment or compensation amount (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">allocatedAmount</code>)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-pink-400 mt-0.5 shrink-0" />
+                  <span>
+                    The 256-bit cryptographic blinding salt preventing dictionary and rainbow table attacks (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">allocationSalt</code>) <InfoTooltip term="salt" />
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-pink-400 mt-0.5 shrink-0" />
+                  <span>
+                    The participant's private spending key used to construct the nullifier (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">claimSecret</code>)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-pink-400 mt-0.5 shrink-0" />
+                  <span>
+                    The organizer's administrative signing key (<code className="font-mono text-text bg-surface px-1.5 py-0.5 rounded border border-border">organizerSecret</code>)
+                  </span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          {/* Card 3: What You Prove */}
-          <div className="sharp-card p-7 space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">03 / Proof</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-400/10 text-emerald-400 border border-emerald-400/30">
-                Zero-Knowledge
-              </span>
+          {/* Bottom Card Footer: What the user proves without revealing */}
+          <div className="p-6 md:p-8 bg-surface-hover/20 border-t border-border space-y-4">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+              <ShieldCheck size={16} />
+              <span>What the user PROVES without revealing (Zero-Knowledge Proof)</span>
             </div>
 
-            <div>
-              <h3 className="font-display text-2xl font-bold text-text">What You Prove</h3>
-              <p className="text-xs text-muted mt-1">
-                Zero information revealed to the network:
-              </p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted leading-relaxed">
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <span>
+                    The claimant proves knowledge of a valid <code className="font-mono text-text bg-surface px-1 py-0.5 rounded border border-border">(recipientSecret, allocatedAmount, allocationSalt)</code> tuple whose derived commitment exists in the on-chain <code className="font-mono text-text bg-surface px-1 py-0.5 rounded border border-border">allocationCommitments</code> set.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <span>
+                    The claimant proves that their requested payout matches the exact amount allocated by the organizer.
+                  </span>
+                </div>
+              </div>
 
-            <ul className="space-y-2.5 text-xs text-muted list-none p-0">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>Knowledge of valid tuple whose commitment <InfoTooltip term="commitment" /> exists in <code className="font-mono text-text">allocationCommitments</code></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>Derived nullifier <InfoTooltip term="nullifier" /> is correct for the commitment and unspent</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>Double-claiming is cryptographically impossible</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>No observer can identify which recipient claimed or what amount was disbursed</span>
-              </li>
-            </ul>
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <span>
+                    The claimant proves that their generated nullifier is correctly derived and has not already been recorded in <code className="font-mono text-text bg-surface px-1 py-0.5 rounded border border-border">claimedNullifiers</code>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <span>
+                    Observers learn only that an authorized participant claimed their valid share; no observer can determine who claimed, what amount they received, or link their wallet to any individual allocation commitment.
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
