@@ -9,6 +9,7 @@ export interface WalletContextValue extends MidnightWalletState {
   refreshBalance: () => Promise<void>;
   openWalletModal: () => void;
   closeWalletModal: () => void;
+  clearError: () => void;
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);

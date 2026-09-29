@@ -19,6 +19,7 @@ import {
   Download,
   X,
   Code2,
+  Info,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
@@ -945,33 +946,40 @@ export const ClaimPage: React.FC = () => {
               </div>
               <p className="leading-relaxed">{claimError}</p>
               {(claimError.toLowerCase().includes('1am') ||
+                claimError.toLowerCase().includes('lace') ||
                 claimError.toLowerCase().includes('wallet') ||
                 claimError.toLowerCase().includes('not detected') ||
                 claimError.toLowerCase().includes('rejected')) && (
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <a
-                    href="https://1am.xyz"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
-                  >
-                    <span>Install 1AM Wallet</span>
-                    <ExternalLink size={13} />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => wallet.connectWallet(false)}
-                    className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
-                  >
-                    Retry Connection
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => wallet.connectWallet('demo')}
-                    className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
-                  >
-                    or switch to Demo Simulator
-                  </button>
+                <div className="pt-2 space-y-2">
+                  <div className="text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 p-2 rounded flex items-center gap-1.5">
+                    <Info size={12} className="text-sky-400 shrink-0" />
+                    <span>Switch Lace to the Preprod network</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href="https://www.lace.io"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
+                    >
+                      <span>Install Midnight Lace</span>
+                      <ExternalLink size={13} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
+                    >
+                      Try again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => wallet.connectWallet('demo')}
+                      className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
+                    >
+                      or switch to Demo Simulator
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

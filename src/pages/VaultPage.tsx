@@ -352,10 +352,10 @@ export const VaultPage: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => wallet.connectWallet(false)}
-              className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0"
+              onClick={() => wallet.connectWallet(false).catch(() => {})}
+              className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 cursor-pointer"
             >
-              Connect Wallet
+              Connect Midnight Lace
             </button>
           </div>
         )}

@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useWallet } from '../../context/WalletContext';
 import logoImg from '../../../assets/logo.png';
 import { InfoTooltip } from '../common/InfoTooltip';
+import { shortenAddress } from '../../midnight/wallet';
 
 interface NavbarProps {
   onOpenMobileMenu: () => void;
@@ -37,9 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
     }
   };
 
-  const truncatedAddress = wallet.address
-    ? `${wallet.address.slice(0, 7)}...${wallet.address.slice(-5)}`
-    : '';
+  const shortenedAddress = shortenAddress(wallet.address);
 
   return (
     <header className="editorial-navbar" role="banner">
@@ -122,93 +121,120 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
 
           {/* Wallet Connect */}
           {wallet.isConnected && wallet.address ? (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setWalletMenuOpen(!walletMenuOpen)}
-                className="btn-pill btn-pill-outline py-1.5 px-3.5 text-xs font-mono flex items-center gap-2"
-                aria-expanded={walletMenuOpen}
-                aria-haspopup="true"
-              >
-                <span className={`w-2 h-2 rounded-full ${wallet.isSimulated ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
-                <span>{truncatedAddress}</span>
-                {wallet.isSimulated && <span className="text-[10px] text-amber-400 font-sans font-bold">[Sim]</span>}
-                <ChevronDown size={14} className="text-muted" />
-              </button>
+            <div className="flex items-center gap-1.5" ref={menuRef}>
+              <div className="relative flex items-center bg-surface border border-border rounded-full p-1 pl-3 shadow-sm hover:border-sky-400/50 transition-colors">
+                <button
+                  onClick={() => setWalletMenuOpen(!walletMenuOpen)}
+                  className="flex items-center gap-1.5 text-xs font-mono font-bold text-text hover:text-sky-400 transition-colors cursor-pointer pr-1"
+                  aria-expanded={walletMenuOpen}
+                  aria-haspopup="true"
+                  title="View wallet details"
+                >
+                  <span className={`w-2 h-2 rounded-full ${wallet.isSimulated ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+                  <span>{shortenedAddress}</span>
+                  {wallet.isSimulated && <span className="text-[10px] text-amber-400 font-sans font-bold">[Sim]</span>}
+                  <ChevronDown size={13} className="text-muted" />
+                </button>
 
-              {walletMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-surface border border-border rounded shadow-lg p-2 z-50">
-                  <div className="px-3 py-2 border-b border-border text-xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-muted text-[10px] uppercase font-bold">
-                        {wallet.isSimulated ? 'Demo Simulator' : wallet.walletName || '1AM Wallet'}
-                      </span>
-                      <span className={`text-[10px] font-bold uppercase ${wallet.isSimulated ? 'text-amber-400' : 'text-emerald-400'}`}>
-                        {wallet.isSimulated ? 'Simulated' : 'Connected'}
+                {/* Direct Copy Button */}
+                <button
+                  onClick={handleCopyAddress}
+                  className="p-1.5 rounded-full hover:bg-surface-hover text-muted hover:text-text transition-colors cursor-pointer"
+                  title={copied ? 'Copied!' : 'Copy address'}
+                  aria-label="Copy address"
+                >
+                  {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                </button>
+
+                {/* Direct Disconnect Option */}
+                <button
+                  onClick={wallet.disconnectWallet}
+                  className="p-1.5 rounded-full hover:bg-rose-500/15 text-muted hover:text-rose-400 transition-colors cursor-pointer ml-0.5"
+                  title="Disconnect"
+                  aria-label="Disconnect wallet"
+                >
+                  <LogOut size={13} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {walletMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-surface border border-border rounded shadow-lg p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-2 border-b border-border text-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-muted text-[10px] uppercase font-bold">
+                          {wallet.isSimulated ? 'Demo Simulator' : wallet.walletName || 'Midnight Lace'}
+                        </span>
+                        <span className={`text-[10px] font-bold uppercase ${wallet.isSimulated ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {wallet.isSimulated ? 'Simulated' : 'Connected'}
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono font-bold text-text mb-1 tracking-wider">
+                        {shortenedAddress}
+                      </div>
+                      <span className="font-mono font-bold text-text text-sm inline-flex items-center gap-1">
+                        <span>{Number(wallet.balance).toLocaleString()} tDUST</span>
+                        <InfoTooltip term="tDUST" />
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-text text-sm inline-flex items-center gap-1">
-                      <span>{Number(wallet.balance).toLocaleString()} tDUST</span>
-                      <InfoTooltip term="tDUST" />
-                    </span>
+
+                    <div className="py-1">
+                      <button
+                        onClick={handleCopyAddress}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-surface-hover rounded text-text transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Copy size={13} />
+                          <span>Copy Address</span>
+                        </span>
+                        {copied && <Check size={13} className="text-emerald-400" />}
+                      </button>
+
+                      <a
+                        href={`https://explorer.1am.xyz/contract/${wallet.address}?network=preprod`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-surface-hover rounded text-text transition-colors no-underline"
+                      >
+                        <Wallet size={13} className="text-sky-400" />
+                        <span>View in Explorer</span>
+                      </a>
+
+                      <button
+                        onClick={() => {
+                          wallet.disconnectWallet();
+                          setWalletMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-rose-500/10 text-rose-400 rounded transition-colors cursor-pointer"
+                      >
+                        <LogOut size={13} />
+                        <span>Disconnect</span>
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="py-1">
-                    <button
-                      onClick={handleCopyAddress}
-                      className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-surface-hover rounded text-text transition-colors"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Copy size={13} />
-                        <span>Copy Address</span>
-                      </span>
-                      {copied && <Check size={13} className="text-emerald-400" />}
-                    </button>
-
-                    <a
-                      href={`https://explorer.1am.xyz/contract/${wallet.address}?network=preprod`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-surface-hover rounded text-text transition-colors no-underline"
-                    >
-                      <Wallet size={13} className="text-sky-400" />
-                      <span>View in 1AM Explorer</span>
-                    </a>
-
-                    <button
-                      onClick={() => {
-                        wallet.disconnectWallet();
-                        setWalletMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-rose-500/10 text-rose-400 rounded transition-colors"
-                    >
-                      <LogOut size={13} />
-                      <span>Disconnect</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => wallet.connectWallet(false)}
+                onClick={() => wallet.connectWallet(false).catch(() => {})}
                 disabled={wallet.isConnecting}
-                className="btn-pill btn-pill-dark py-1.5 px-4 text-xs flex items-center gap-2"
+                className="btn-pill btn-pill-dark py-1.5 px-4 text-xs flex items-center gap-2 cursor-pointer"
                 aria-label="Connect Wallet"
               >
                 <Wallet size={14} />
                 <span>
                   {wallet.isConnecting
                     ? 'Connecting...'
-                    : wallet.installedWallets.length > 0
-                    ? `Connect ${wallet.installedWallets[0].name || '1AM'}`
-                    : 'Connect 1AM Wallet'}
+                    : wallet.hasLaceExtension
+                    ? 'Connect Midnight Lace'
+                    : 'Connect Midnight Lace'}
                 </span>
               </button>
 
               <button
                 onClick={() => wallet.connectWallet('demo')}
-                className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex"
+                className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex cursor-pointer"
                 title="Connect simulated reviewer demo wallet"
                 aria-label="Demo Wallet"
               >

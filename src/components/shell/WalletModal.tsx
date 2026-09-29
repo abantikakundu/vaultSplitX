@@ -1,12 +1,30 @@
-import React, { useEffect } from 'react';
-import { Wallet, ExternalLink, X, ShieldCheck, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Wallet,
+  ExternalLink,
+  X,
+  ShieldCheck,
+  RefreshCw,
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Copy,
+  Check,
+  LogOut,
+  Info,
+} from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
 import { getNetworkConfig } from '../../midnight/config';
+import {
+  LACE_INSTALL_URL,
+  shortenAddress,
+} from '../../midnight/wallet';
 import { InfoTooltip } from '../common/InfoTooltip';
 
 export const WalletModal: React.FC = () => {
   const wallet = useWallet();
   const netConfig = getNetworkConfig(wallet.network || 'preprod');
+  const [copied, setCopied] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -19,7 +37,30 @@ export const WalletModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [wallet.showWalletModal, wallet.closeWalletModal]);
 
+  const handleCopyAddress = () => {
+    if (wallet.address) {
+      navigator.clipboard.writeText(wallet.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (!wallet.showWalletModal) return null;
+
+  const isLaceDetected =
+    wallet.hasLaceExtension ||
+    wallet.installedWallets.some(
+      (w) =>
+        w.name.toLowerCase().includes('lace') ||
+        w.id.toLowerCase().includes('lace')
+    );
+
+  const isRejection =
+    wallet.error &&
+    (wallet.error.toLowerCase().includes('reject') ||
+      wallet.error.toLowerCase().includes('declined') ||
+      wallet.error.toLowerCase().includes('denied') ||
+      wallet.error.toLowerCase().includes('cancel'));
 
   return (
     <div
@@ -40,7 +81,7 @@ export const WalletModal: React.FC = () => {
             </div>
             <div>
               <h3 id="wallet-modal-title" className="font-display text-base font-bold text-text">
-                Connect Midnight Wallet
+                {wallet.isConnected ? 'Midnight Wallet' : 'Connect Midnight Lace'}
               </h3>
               <div className="flex items-center gap-2 text-xs text-muted">
                 <span>Target:</span>
@@ -63,92 +104,243 @@ export const WalletModal: React.FC = () => {
 
         {/* Modal Body */}
         <div className="p-6 space-y-5">
-          <p className="text-xs text-muted leading-relaxed">
-            Connect your <strong>1AM Wallet</strong> to execute zero-knowledge circuits, approve DUST fees, and submit verifiable on-chain transactions to the Midnight Preprod blockchain.
-          </p>
-
-          {/* Installed Wallets List */}
-          {wallet.installedWallets.length > 0 ? (
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
-                Detected Extensions
-              </span>
-              {wallet.installedWallets.map((w) => (
-                <button
-                  key={w.id}
-                  onClick={() => wallet.connectWallet(w.id)}
-                  disabled={wallet.isConnecting}
-                  className="w-full p-4 rounded-md border border-border bg-surface-hover hover:border-sky-400 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer group"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-display font-bold text-text text-sm group-hover:text-sky-400 transition-colors">
-                        {w.name}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                        Detected
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-muted font-mono block">
-                      v{w.apiVersion} • Midnight DApp Standard
+          {/* 1. If Connected: Show shortened address (first 6 and last 4 characters), copy button, disconnect option */}
+          {wallet.isConnected && wallet.address ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-display font-bold text-sm text-text">
+                      {wallet.isSimulated
+                        ? 'Demo Simulator Connected'
+                        : wallet.walletName || 'Midnight Lace'}
                     </span>
                   </div>
-                  <div className="btn-pill btn-pill-sky text-xs py-1.5 px-3 shrink-0 flex items-center gap-1 group-hover:scale-105 transition-transform">
-                    <span>Connect</span>
-                    <ArrowRight size={13} />
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Connected
+                  </span>
+                </div>
+
+                {/* Shortened Address (first 6 and last 4 characters) & Copy */}
+                <div className="flex items-center justify-between p-2.5 rounded bg-surface border border-border">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] uppercase font-bold text-muted block">
+                      Account Address
+                    </span>
+                    <span className="font-mono text-xs font-bold text-text tracking-wider">
+                      {shortenAddress(wallet.address)}
+                    </span>
                   </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="p-5 rounded-md border border-amber-500/30 bg-amber-500/10 space-y-4 text-center">
-              <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 mx-auto flex items-center justify-center text-amber-400">
-                <AlertCircle size={24} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-display font-bold text-text text-sm">
-                  1AM Wallet Not Detected
-                </h4>
-                <p className="text-xs text-muted max-w-xs mx-auto">
-                  To sign real zero-knowledge proofs and deploy distribution vaults <InfoTooltip term="vault" /> on Midnight Preprod, please install or unlock the 1AM Wallet extension.
-                </p>
+                  <button
+                    onClick={handleCopyAddress}
+                    className="btn-pill btn-pill-outline py-1.5 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer hover:border-sky-400"
+                    aria-label="Copy address"
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={13} className="text-emerald-400" />
+                        <span className="text-emerald-400 font-semibold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Balance display */}
+                <div className="flex items-center justify-between text-xs px-1 text-muted">
+                  <span>Balance:</span>
+                  <span className="font-mono font-bold text-text inline-flex items-center gap-1">
+                    <span>{Number(wallet.balance).toLocaleString()} tDUST</span>
+                    <InfoTooltip term="tDUST" />
+                  </span>
+                </div>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-                <a
-                  href="https://1am.xyz"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold no-underline w-full sm:w-auto justify-center"
+              {/* Action Buttons: Disconnect & Close */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    wallet.disconnectWallet();
+                  }}
+                  className="btn-pill py-2 px-4 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-2 flex-1 cursor-pointer transition-colors"
+                  aria-label="Disconnect wallet"
                 >
-                  <span>Install 1AM Wallet</span>
-                  <ExternalLink size={13} />
-                </a>
+                  <LogOut size={14} />
+                  <span>Disconnect</span>
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => wallet.connectWallet(false)}
-                  disabled={wallet.isConnecting}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 w-full sm:w-auto justify-center"
+                  onClick={wallet.closeWalletModal}
+                  className="btn-pill btn-pill-outline py-2 px-4 text-xs font-semibold cursor-pointer"
                 >
-                  <RefreshCw size={12} className={wallet.isConnecting ? 'animate-spin' : ''} />
-                  <span>Refresh Detection</span>
+                  Close
                 </button>
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* 2. On rejection or failure: Show clear error with "Try again" button */}
+              {wallet.error && (
+                <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1 rounded-full bg-rose-500/20 text-rose-400 shrink-0 mt-0.5">
+                      {isRejection ? <AlertCircle size={18} /> : <AlertTriangle size={18} />}
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <h4 className="font-display font-bold text-rose-300 text-xs sm:text-sm">
+                        {isRejection ? 'Connection Rejected' : 'Connection Failed'}
+                      </h4>
+                      <p className="text-xs text-rose-200/90 leading-relaxed">
+                        {wallet.error}
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Simulator Demo Option */}
-          <div className="pt-2 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-muted">Want to preview without a wallet?</span>
-            <button
-              type="button"
-              onClick={() => wallet.connectWallet('demo')}
-              className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
-            >
-              Use Demo Simulator
-            </button>
-          </div>
+                  {/* Note: Switch Lace to the Preprod network */}
+                  <div className="text-[11px] text-muted flex items-center gap-1.5 pt-2 border-t border-rose-500/20">
+                    <Info size={13} className="text-sky-400 shrink-0" />
+                    <span>Note: <strong>Switch Lace to the Preprod network</strong></span>
+                  </div>
+
+                  <div className="pt-1 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      disabled={wallet.isConnecting}
+                      className="btn-pill btn-pill-rose text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold cursor-pointer transition-all"
+                    >
+                      <RefreshCw size={13} className={wallet.isConnecting ? 'animate-spin' : ''} />
+                      <span>{wallet.isConnecting ? 'Connecting...' : 'Try again'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => wallet.clearError()}
+                      className="text-xs text-muted hover:text-text px-2 py-1 cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Description text */}
+              <p className="text-xs text-muted leading-relaxed">
+                Connect your <strong>Midnight Lace</strong> wallet to execute zero-knowledge circuits, approve DUST fees, and submit confidential transactions on Midnight Preprod.
+              </p>
+
+              {/* 4. If Midnight Lace is NOT detected */}
+              {!isLaceDetected ? (
+                <div className="p-5 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 mx-auto flex items-center justify-center text-amber-400">
+                    <AlertCircle size={24} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h4 className="font-display font-bold text-text text-sm">
+                      Midnight Lace Not Detected
+                    </h4>
+                    <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+                      Midnight Lace wallet extension was not detected in your browser. Install the official Lace extension to interact with confidential vaults on Midnight Preprod.
+                    </p>
+                  </div>
+
+                  {/* Required note: "Switch Lace to the Preprod network" */}
+                  <div className="p-3 rounded-md bg-sky-500/10 border border-sky-500/30 text-xs text-sky-200 flex items-center justify-center gap-2 text-center">
+                    <Info size={14} className="text-sky-400 shrink-0" />
+                    <span>Switch Lace to the Preprod network</span>
+                  </div>
+
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                    <a
+                      href={LACE_INSTALL_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold no-underline w-full sm:w-auto justify-center"
+                    >
+                      <span>Install Midnight Lace</span>
+                      <ExternalLink size={13} />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      disabled={wallet.isConnecting}
+                      className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
+                    >
+                      <RefreshCw size={12} className={wallet.isConnecting ? 'animate-spin' : ''} />
+                      <span>{wallet.isConnecting ? 'Detecting...' : 'Refresh Detection'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* 5. Midnight Lace detected */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-muted tracking-wider block">
+                      Detected Extensions
+                    </span>
+                    <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Ready to Connect
+                    </span>
+                  </div>
+
+                  {wallet.installedWallets.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => wallet.connectWallet(w.id).catch(() => {})}
+                      disabled={wallet.isConnecting}
+                      className="w-full p-4 rounded-md border border-border bg-surface-hover hover:border-sky-400 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer group"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-display font-bold text-text text-sm group-hover:text-sky-400 transition-colors">
+                            {w.name}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            Detected
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted font-mono block">
+                          v{w.apiVersion} • Midnight DApp Standard
+                        </span>
+                      </div>
+                      <div className="btn-pill btn-pill-sky text-xs py-1.5 px-3 shrink-0 flex items-center gap-1 group-hover:scale-105 transition-transform">
+                        <span>{wallet.isConnecting ? 'Connecting...' : 'Connect'}</span>
+                        <ArrowRight size={13} />
+                      </div>
+                    </button>
+                  ))}
+
+                  {/* Required note: "Switch Lace to the Preprod network" */}
+                  <div className="p-3 rounded-md bg-sky-500/10 border border-sky-500/30 text-xs text-sky-200 flex items-center gap-2">
+                    <Info size={14} className="text-sky-400 shrink-0" />
+                    <span>Switch Lace to the Preprod network</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Simulator Demo Option */}
+              <div className="pt-2 border-t border-border flex items-center justify-between">
+                <span className="text-xs text-muted">Want to preview without a wallet?</span>
+                <button
+                  type="button"
+                  onClick={() => wallet.connectWallet('demo')}
+                  className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
+                >
+                  Use Demo Simulator
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Modal Footer */}

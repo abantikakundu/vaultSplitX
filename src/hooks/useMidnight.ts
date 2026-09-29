@@ -11,6 +11,8 @@ import {
   saveConnectedWalletId,
   clearSavedWalletId,
   waitForMidnightExtensions,
+  isLaceWallet,
+  isLaceInstalled,
 } from '../midnight/wallet';
 
 export interface MidnightWalletState {
@@ -57,11 +59,16 @@ export function useMidnight() {
   // Scan installed wallets
   const updateInstalledWallets = useCallback(() => {
     const list = listInstalledWallets();
+    const laceDetected = isLaceInstalled();
     setWalletState((prev) => ({
       ...prev,
       installedWallets: list,
-      hasLaceExtension: list.length > 0,
+      hasLaceExtension: laceDetected,
     }));
+  }, []);
+
+  const clearError = useCallback(() => {
+    setWalletState((prev) => ({ ...prev, error: null }));
   }, []);
 
   // Detect wallets on mount and attempt auto-reconnect
@@ -127,19 +134,14 @@ export function useMidnight() {
         if (typeof preferSimulationOrWalletId === 'string' && preferSimulationOrWalletId !== '' && preferSimulationOrWalletId !== 'demo') {
           targetId = preferSimulationOrWalletId;
         } else if (installed.length > 0) {
-          // Prefer 1AM wallet if present, otherwise first available
-          const oneAm = installed.find((w) =>
-            w.id.toLowerCase().includes('1am') ||
-            w.id.toLowerCase().includes('oneam') ||
-            w.name.toLowerCase().includes('1am') ||
-            w.name.toLowerCase().includes('oneam')
-          );
-          targetId = oneAm ? oneAm.id : installed[0].id;
+          // Prioritize Midnight Lace if present
+          const lace = installed.find((w) => isLaceWallet(w.id, w.name));
+          targetId = lace ? lace.id : installed[0].id;
         } else if (typeof window !== 'undefined' && window.midnight) {
           const keys = Object.keys(window.midnight);
           if (keys.length > 0) {
-            const oneAmKey = keys.find((k) => k.toLowerCase().includes('1am') || k.toLowerCase().includes('oneam'));
-            targetId = oneAmKey || keys[0];
+            const laceKey = keys.find((k) => isLaceWallet(k));
+            targetId = laceKey || keys[0];
           }
         }
 
@@ -163,8 +165,8 @@ export function useMidnight() {
           return connected;
         }
 
-        // If no real extension is installed, inform and open wallet modal
-        const errMsg = '1AM Wallet extension not detected. Please ensure 1AM Wallet is installed in Chrome/Brave and unlocked.';
+        // If Midnight Lace is not detected, surface error with prompt requirements and open modal
+        const errMsg = "Midnight Lace wallet is not detected. Please install Midnight Lace. Switch Lace to the Preprod network.";
         setWalletState((prev) => ({
           ...prev,
           isConnecting: false,
@@ -173,11 +175,21 @@ export function useMidnight() {
         }));
         throw new Error(errMsg);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to connect Midnight wallet';
+        const rawMsg = err instanceof Error ? err.message : 'Failed to connect Midnight Lace';
+        let formattedMsg = rawMsg;
+        if (
+          rawMsg.toLowerCase().includes('reject') ||
+          rawMsg.toLowerCase().includes('declined') ||
+          rawMsg.toLowerCase().includes('cancel') ||
+          rawMsg.toLowerCase().includes('denied')
+        ) {
+          formattedMsg = 'Connection request was rejected by Midnight Lace.';
+        }
         setWalletState((prev) => ({
           ...prev,
           isConnecting: false,
-          error: msg,
+          error: formattedMsg,
+          showWalletModal: true,
         }));
         throw err;
       }
@@ -219,5 +231,6 @@ export function useMidnight() {
     refreshBalance,
     openWalletModal,
     closeWalletModal,
+    clearError,
   };
 }

@@ -25,14 +25,38 @@ declare global {
   }
 }
 
+export const LACE_INSTALL_URL = 'https://www.lace.io';
+export const LACE_NETWORK_NOTE = 'Switch Lace to the Preprod network';
+
+export const isLaceWallet = (id: string, name?: string): boolean => {
+  const lowerId = id.toLowerCase();
+  const lowerName = (name || '').toLowerCase();
+  return lowerId.includes('lace') || lowerName.includes('lace');
+};
+
+export const isLaceInstalled = (): boolean => {
+  if (typeof window === 'undefined' || !window.midnight) return false;
+  return Object.entries(window.midnight).some(([id, wallet]) => isLaceWallet(id, wallet.name));
+};
+
+/**
+ * Formats a Midnight address shortened to the first 6 and last 4 characters.
+ * Example: mn_addr_preprod1abc...xyz9 -> mn_add...xyz9
+ */
+export const shortenAddress = (address: string | null | undefined): string => {
+  if (!address) return '';
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 export const listInstalledWallets = (): WalletOption[] => {
   if (typeof window === 'undefined' || !window.midnight) return [];
   return Object.entries(window.midnight).map(([id, wallet]) => {
     let displayName = wallet.name || id;
-    if (id.toLowerCase().includes('1am') || id.toLowerCase().includes('oneam')) {
-      displayName = '1AM Wallet';
-    } else if (id.toLowerCase().includes('lace')) {
+    if (isLaceWallet(id, wallet.name)) {
       displayName = 'Midnight Lace';
+    } else if (id.toLowerCase().includes('1am') || id.toLowerCase().includes('oneam')) {
+      displayName = '1AM Wallet';
     }
     return {
       id,
@@ -50,14 +74,30 @@ export const connectMidnightWallet = async (
   const wallet = window.midnight?.[walletId];
 
   if (!wallet) {
-    throw new Error(`Midnight wallet extension '${walletId}' is not installed or unavailable in window.midnight.`);
+    throw new Error(`Midnight Lace extension '${walletId}' is not installed or unavailable in window.midnight.`);
   }
 
-  const connected = await wallet.connect(network);
+  let connected;
+  try {
+    connected = await wallet.connect(network);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (
+      message.toLowerCase().includes('reject') ||
+      message.toLowerCase().includes('declined') ||
+      message.toLowerCase().includes('user declined') ||
+      message.toLowerCase().includes('cancel') ||
+      message.toLowerCase().includes('denied')
+    ) {
+      throw new Error('Connection request was rejected by Midnight Lace.');
+    }
+    throw err instanceof Error ? err : new Error(message || 'Failed to connect to Midnight Lace wallet.');
+  }
+
   const status = await connected.getConnectionStatus();
 
   if (status.status !== 'connected') {
-    throw new Error('Connection request was rejected by the Midnight wallet.');
+    throw new Error('Connection request was rejected by Midnight Lace.');
   }
 
   const { unshieldedAddress } = await connected.getUnshieldedAddress();
@@ -73,7 +113,9 @@ export const connectMidnightWallet = async (
   }
 
   let displayName = wallet.name || walletId;
-  if (walletId.toLowerCase().includes('1am') || walletId.toLowerCase().includes('oneam')) {
+  if (isLaceWallet(walletId, wallet.name)) {
+    displayName = 'Midnight Lace';
+  } else if (walletId.toLowerCase().includes('1am') || walletId.toLowerCase().includes('oneam')) {
     displayName = '1AM Wallet';
   }
 

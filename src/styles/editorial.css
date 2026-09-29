@@ -289,6 +289,17 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-pill-rose {
+  background-color: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+.btn-pill-rose:hover {
+  background-color: rgba(244, 63, 94, 0.3);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 .btn-hero-outline {
   background-color: transparent;
   color: #0B1F33;
