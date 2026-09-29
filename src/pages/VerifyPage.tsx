@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { NETWORK_CONFIG } from '../utils/config';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 export const VerifyPage: React.FC = () => {
   const { vaultState, refreshVaultState, isSyncing } = useVault();
@@ -51,7 +52,7 @@ export const VerifyPage: React.FC = () => {
             </h1>
 
             <p className="text-sm text-muted max-w-lg leading-relaxed">
-              Anyone can independently verify that total locked vault funds match settled claims and that zero duplicate payouts occur—all without accessing private recipient records.
+              Anyone can independently verify that total locked vault <InfoTooltip term="vault" /> funds match settled claims and that zero duplicate payouts occur—all without accessing private recipient records.
             </p>
           </div>
 
@@ -119,7 +120,12 @@ export const VerifyPage: React.FC = () => {
 
                 {/* 2. Distribution ID */}
                 <tr className="hover:bg-surface-hover/50 transition-colors">
-                  <td className="py-3.5 px-5 font-bold font-sans text-text">Distribution ID</td>
+                  <td className="py-3.5 px-5 font-bold font-sans text-text">
+                    <span className="inline-flex items-center gap-1">
+                      <span>Distribution ID</span>
+                      <InfoTooltip term="distribution ID" />
+                    </span>
+                  </td>
                   <td className="py-3.5 px-5 text-muted">Bytes&lt;32&gt;</td>
                   <td className="py-3.5 px-5 text-text break-all max-w-xs">{distId}</td>
                   <td className="py-3.5 px-5 text-right">
@@ -135,10 +141,18 @@ export const VerifyPage: React.FC = () => {
 
                 {/* 3. Total Vault Funds */}
                 <tr className="hover:bg-surface-hover/50 transition-colors">
-                  <td className="py-3.5 px-5 font-bold font-sans text-text">Total Vault Funds</td>
+                  <td className="py-3.5 px-5 font-bold font-sans text-text">
+                    <span className="inline-flex items-center gap-1">
+                      <span>Total Vault Funds</span>
+                      <InfoTooltip term="vault" />
+                    </span>
+                  </td>
                   <td className="py-3.5 px-5 text-muted">Uint&lt;64&gt;</td>
                   <td className="py-3.5 px-5 font-bold text-sky-400 text-sm font-mono">
-                    {Number(totalFunds).toLocaleString()} tDUST
+                    <span className="inline-flex items-center gap-1">
+                      <span>{Number(totalFunds).toLocaleString()} tDUST</span>
+                      <InfoTooltip term="tDUST" />
+                    </span>
                   </td>
                   <td className="py-3.5 px-5 text-right">
                     <button
@@ -152,7 +166,12 @@ export const VerifyPage: React.FC = () => {
 
                 {/* 4. Commitments Count */}
                 <tr className="hover:bg-surface-hover/50 transition-colors">
-                  <td className="py-3.5 px-5 font-bold font-sans text-text">Commitments Count</td>
+                  <td className="py-3.5 px-5 font-bold font-sans text-text">
+                    <span className="inline-flex items-center gap-1">
+                      <span>Commitments Count</span>
+                      <InfoTooltip term="commitment" />
+                    </span>
+                  </td>
                   <td className="py-3.5 px-5 text-muted">Set&lt;Bytes&lt;32&gt;&gt;.size</td>
                   <td className="py-3.5 px-5 text-text">{commitments.length} allocation leaves</td>
                   <td className="py-3.5 px-5 text-right font-sans text-[11px] text-muted">Read-only</td>
@@ -160,7 +179,12 @@ export const VerifyPage: React.FC = () => {
 
                 {/* 5. Claimed Count */}
                 <tr className="hover:bg-surface-hover/50 transition-colors">
-                  <td className="py-3.5 px-5 font-bold font-sans text-text">Claimed Counter</td>
+                  <td className="py-3.5 px-5 font-bold font-sans text-text">
+                    <span className="inline-flex items-center gap-1">
+                      <span>Claimed Counter</span>
+                      <InfoTooltip term="nullifier" />
+                    </span>
+                  </td>
                   <td className="py-3.5 px-5 text-muted">Counter</td>
                   <td className="py-3.5 px-5 font-bold text-emerald-400">{claimedCount} settled</td>
                   <td className="py-3.5 px-5 text-right font-sans text-[11px] text-muted">Read-only</td>
@@ -209,7 +233,7 @@ export const VerifyPage: React.FC = () => {
             <ul className="space-y-3 text-xs text-muted list-none p-0">
               <li className="flex items-start gap-2.5">
                 <Check size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>The aggregate vault deposit equals the sum of authorized distribution amounts.</span>
+                <span>The aggregate vault <InfoTooltip term="vault" /> deposit equals the sum of authorized distribution amounts.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Check size={14} className="text-sky-400 mt-0.5 shrink-0" />
@@ -217,7 +241,7 @@ export const VerifyPage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2.5">
                 <Check size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Each spent nullifier is unique, strictly preventing double-claiming or replay.</span>
+                <span>Each spent nullifier <InfoTooltip term="nullifier" /> is unique, strictly preventing double-claiming or replay.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Check size={14} className="text-sky-400 mt-0.5 shrink-0" />
@@ -240,15 +264,15 @@ export const VerifyPage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2.5">
                 <EyeOff size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>The link between a participant's wallet address and their allocation commitment.</span>
+                <span>The link between a participant's wallet address and their allocation commitment <InfoTooltip term="commitment" />.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <EyeOff size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Recipient private seed passphrases and 256-bit blinding salts.</span>
+                <span>Recipient private seed passphrases and 256-bit blinding salts <InfoTooltip term="salt" />.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <EyeOff size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>Which commitment was settled by which public nullifier transaction.</span>
+                <span>Which commitment <InfoTooltip term="commitment" /> was settled by which public nullifier <InfoTooltip term="nullifier" /> transaction.</span>
               </li>
             </ul>
           </div>
@@ -262,7 +286,10 @@ export const VerifyPage: React.FC = () => {
           <div className="sharp-card p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h3 className="font-bold text-sm text-text">Registered Commitments Set</h3>
+                <h3 className="font-bold text-sm text-text inline-flex items-center gap-1">
+                  <span>Registered Commitments Set</span>
+                  <InfoTooltip term="commitment" />
+                </h3>
                 <span className="text-[11px] text-muted">Opaque 32-byte cryptographic hashes</span>
               </div>
               <span className="font-mono text-xs text-sky-400 font-bold">
@@ -296,7 +323,10 @@ export const VerifyPage: React.FC = () => {
           <div className="sharp-card p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h3 className="font-bold text-sm text-text">Spent Nullifiers Set</h3>
+                <h3 className="font-bold text-sm text-text inline-flex items-center gap-1">
+                  <span>Spent Nullifiers Set</span>
+                  <InfoTooltip term="nullifier" />
+                </h3>
                 <span className="text-[11px] text-muted">Cryptographic markers preventing double claims</span>
               </div>
               <span className="font-mono text-xs text-emerald-400 font-bold">

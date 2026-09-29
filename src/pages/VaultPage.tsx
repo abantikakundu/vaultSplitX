@@ -19,6 +19,7 @@ import {
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
 import { getExplorerContractUrl, getExplorerTxUrl } from '../utils/config';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 export const VaultPage: React.FC = () => {
   const {
@@ -145,6 +146,7 @@ export const VaultPage: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <span>Batch ID:</span>
                 <span className="text-text">{vaultState?.distributionId.slice(0, 16)}...{vaultState?.distributionId.slice(-8)}</span>
+                <InfoTooltip term="distribution ID" />
               </div>
               <span>•</span>
               <div className="flex items-center gap-1.5">
@@ -249,36 +251,48 @@ export const VaultPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Stat 1 */}
           <div className="sharp-card p-6 space-y-2">
-            <span className="text-xs uppercase font-bold text-muted tracking-wider block">
-              Total Vault Pool
+            <span className="text-xs uppercase font-bold text-muted tracking-wider flex items-center gap-1">
+              <span>Total Vault Pool</span>
+              <InfoTooltip term="vault" />
             </span>
-            <div className="font-display text-3xl font-extrabold text-sky-400 font-mono">
-              {Number(totalFunds).toLocaleString()}{' '}
-              <span className="text-xs font-sans text-muted">tDUST</span>
+            <div className="font-display text-3xl font-extrabold text-sky-400 font-mono flex items-center gap-1">
+              <span>{Number(totalFunds).toLocaleString()}</span>
+              <span className="text-xs font-sans text-muted inline-flex items-center gap-0.5">
+                <span>tDUST</span>
+                <InfoTooltip term="tDUST" />
+              </span>
             </div>
             <p className="text-[11px] text-muted">Publicly locked on Midnight</p>
           </div>
 
           {/* Stat 2 */}
           <div className="sharp-card p-6 space-y-2">
-            <span className="text-xs uppercase font-bold text-muted tracking-wider block">
-              Registered Shares
+            <span className="text-xs uppercase font-bold text-muted tracking-wider flex items-center gap-1">
+              <span>Registered Shares</span>
+              <InfoTooltip term="commitment" />
             </span>
             <div className="font-display text-3xl font-extrabold text-text font-mono">
               0{allocationsCount}
             </div>
-            <p className="text-[11px] text-muted">Opaque commitment leaves</p>
+            <p className="text-[11px] text-muted flex items-center gap-1">
+              <span>Opaque commitment leaves</span>
+              <InfoTooltip term="commitment" />
+            </p>
           </div>
 
           {/* Stat 3 */}
           <div className="sharp-card p-6 space-y-2">
-            <span className="text-xs uppercase font-bold text-muted tracking-wider block">
-              Claims Settled
+            <span className="text-xs uppercase font-bold text-muted tracking-wider flex items-center gap-1">
+              <span>Claims Settled</span>
+              <InfoTooltip term="nullifier" />
             </span>
             <div className="font-display text-3xl font-extrabold text-emerald-400 font-mono">
               0{claimsCount}
             </div>
-            <p className="text-[11px] text-muted">Un-linkable nullifiers spent</p>
+            <p className="text-[11px] text-muted flex items-center gap-1">
+              <span>Un-linkable nullifiers spent</span>
+              <InfoTooltip term="nullifier" />
+            </p>
           </div>
 
           {/* Stat 4 */}
@@ -368,8 +382,9 @@ export const VaultPage: React.FC = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="font-mono font-extrabold text-base text-sky-400">
-                      {Number(alloc.amount).toLocaleString()} tDUST
+                    <div className="font-mono font-extrabold text-base text-sky-400 flex items-center justify-end gap-1">
+                      <span>{Number(alloc.amount).toLocaleString()} tDUST</span>
+                      <InfoTooltip term="tDUST" />
                     </div>
                     <div className="text-[10px] text-muted uppercase">Confidential Share</div>
                   </div>
@@ -407,7 +422,10 @@ export const VaultPage: React.FC = () => {
 
               {/* Commitment Hash Row */}
               <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono text-muted gap-2">
-                <span className="text-[11px] font-sans">On-Chain Commitment Leaf:</span>
+                <span className="text-[11px] font-sans inline-flex items-center gap-1">
+                  <span>On-Chain Commitment Leaf:</span>
+                  <InfoTooltip term="commitment" />
+                </span>
                 <div className="flex items-center gap-2">
                   <span className="text-text break-all text-[11px]">{alloc.commitment}</span>
                   <button
@@ -462,7 +480,10 @@ export const VaultPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="editorial-label">Payment Amount (tDUST)</label>
+                <label className="editorial-label inline-flex items-center gap-1">
+                  <span>Payment Amount (tDUST)</span>
+                  <InfoTooltip term="tDUST" />
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -475,7 +496,10 @@ export const VaultPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="editorial-label">Secret Passphrase / Seed</label>
+                <label className="editorial-label inline-flex items-center gap-1">
+                  <span>Secret Passphrase / Salt Seed</span>
+                  <InfoTooltip term="salt" />
+                </label>
                 <input
                   type="text"
                   value={newSeed}
@@ -523,7 +547,10 @@ export const VaultPage: React.FC = () => {
                       <span>Registering Commitment...</span>
                     </>
                   ) : (
-                    <span>Register Commitment</span>
+                    <span className="inline-flex items-center gap-1">
+                      <span>Register Commitment</span>
+                      <InfoTooltip term="commitment" />
+                    </span>
                   )}
                 </button>
               </div>

@@ -19,6 +19,7 @@ import {
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
 import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 interface RecipientRow {
   id: string;
@@ -321,6 +322,7 @@ export const CreatePage: React.FC = () => {
           >
             <span className="font-mono text-xs text-sky-400">02</span>
             <span>Fund the Vault</span>
+            <InfoTooltip term="vault" />
           </button>
           <button
             onClick={() => setCurrentStep(3)}
@@ -344,7 +346,10 @@ export const CreatePage: React.FC = () => {
                     01
                   </span>
                   <div>
-                    <h2 className="font-display text-xl font-bold text-text">Distribution Identity</h2>
+                    <h2 className="font-display text-xl font-bold text-text inline-flex items-center gap-1.5">
+                      <span>Distribution Identity</span>
+                      <InfoTooltip term="distribution ID" />
+                    </h2>
                     <p className="text-xs text-muted">Assign a recognizable title and operational purpose to this batch.</p>
                   </div>
                 </div>
@@ -388,15 +393,20 @@ export const CreatePage: React.FC = () => {
                     02
                   </span>
                   <div>
-                    <h2 className="font-display text-xl font-bold text-text">Fund the Vault</h2>
+                    <h2 className="font-display text-xl font-bold text-text inline-flex items-center gap-1.5">
+                      <span>Fund the Vault</span>
+                      <InfoTooltip term="vault" />
+                    </h2>
                     <p className="text-xs text-muted">Specify the aggregate pool deposited into the Midnight smart contract.</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="dist-total" className="editorial-label">
-                      Total Vault Funds (tDUST)
+                    <label htmlFor="dist-total" className="editorial-label inline-flex items-center gap-1">
+                      <span>Total Vault Funds (tDUST)</span>
+                      <InfoTooltip term="vault" />
+                      <InfoTooltip term="tDUST" />
                     </label>
                     <div className="relative">
                       <input
@@ -408,8 +418,9 @@ export const CreatePage: React.FC = () => {
                         onChange={(e) => setTotalFundsStr(e.target.value)}
                         className="editorial-input editorial-input-mono text-lg font-bold text-sky-400"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-sans text-xs font-bold text-muted">
-                        tDUST
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-sans text-xs font-bold text-muted inline-flex items-center gap-1">
+                        <span>tDUST</span>
+                        <InfoTooltip term="tDUST" />
                       </span>
                     </div>
                   </div>
@@ -450,7 +461,9 @@ export const CreatePage: React.FC = () => {
                     </span>
                     <div>
                       <h2 className="font-display text-xl font-bold text-text">Recipient Allocations</h2>
-                      <p className="text-xs text-muted">Define confidential shares. Amounts are blinded into client-side commitments.</p>
+                      <p className="text-xs text-muted">
+                        Define confidential shares. Amounts are blinded into client-side commitments <InfoTooltip term="commitment" />.
+                      </p>
                     </div>
                   </div>
 
@@ -500,8 +513,11 @@ export const CreatePage: React.FC = () => {
                 {/* Running Allocated Bar */}
                 <div className="p-4 bg-surface-hover border border-border rounded space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-text">
-                      Allocated {Number(allocatedTotal).toLocaleString()} of {Number(totalFunds).toLocaleString()} tDUST
+                    <span className="font-semibold text-text inline-flex items-center gap-1">
+                      <span>
+                        Allocated {Number(allocatedTotal).toLocaleString()} of {Number(totalFunds).toLocaleString()} tDUST
+                      </span>
+                      <InfoTooltip term="tDUST" />
                     </span>
                     <span
                       className={`font-mono font-bold ${
@@ -565,11 +581,16 @@ export const CreatePage: React.FC = () => {
                         {/* Amount / Pct / Weight depending on ruleType */}
                         <div className="sm:col-span-4">
                           <label className="text-[10px] font-bold text-muted uppercase block mb-1">
-                            {ruleType === 'fixed'
-                              ? 'Amount (tDUST)'
-                              : ruleType === 'percentage'
-                              ? 'Share (%)'
-                              : 'Weight'}
+                            {ruleType === 'fixed' ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span>Amount (tDUST)</span>
+                                <InfoTooltip term="tDUST" />
+                              </span>
+                            ) : ruleType === 'percentage' ? (
+                              'Share (%)'
+                            ) : (
+                              'Weight'
+                            )}
                           </label>
                           <input
                             type="number"
@@ -601,7 +622,10 @@ export const CreatePage: React.FC = () => {
                         {/* Secret Seed */}
                         <div className="sm:col-span-2">
                           <label className="text-[10px] font-bold text-muted uppercase block mb-1">
-                            Secret Seed
+                            <span className="inline-flex items-center gap-1">
+                              <span>Secret Seed / Salt</span>
+                              <InfoTooltip term="salt" />
+                            </span>
                           </label>
                           <input
                             type="text"
@@ -713,7 +737,7 @@ export const CreatePage: React.FC = () => {
                     <span>Allocations Registered on Midnight Preprod Smart Contract!</span>
                   </div>
                   <p className="text-xs text-emerald-300">
-                    Opaque commitments have been published to the Midnight ledger on smart contract <code className="text-white font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>. Recipients can now privately claim their allocations with ZK proofs.
+                    Opaque commitments <InfoTooltip term="commitment" /> have been published to the Midnight ledger on smart contract <code className="text-white font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>. Recipients can now privately claim their allocations with ZK proofs.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -810,12 +834,16 @@ export const CreatePage: React.FC = () => {
                     {distTitle || 'Untitled Batch'}
                   </div>
 
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-ink/70">
-                    Total Locked Pool
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-ink/70 flex items-center gap-1">
+                    <span>Total Locked Pool</span>
+                    <InfoTooltip term="vault" />
                   </div>
                   <div className="font-display text-2xl font-extrabold text-ink">
                     {Number(totalFunds).toLocaleString()}{' '}
-                    <span className="text-xs font-mono font-normal">tDUST</span>
+                    <span className="text-xs font-mono font-normal inline-flex items-center gap-0.5">
+                      <span>tDUST</span>
+                      <InfoTooltip term="tDUST" />
+                    </span>
                   </div>
 
                   <div className="card-corner-icon" aria-hidden="true">
@@ -872,11 +900,11 @@ export const CreatePage: React.FC = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                      <span>One claim per recipient enforced via nullifiers</span>
+                      <span>One claim per recipient enforced via nullifiers <InfoTooltip term="nullifier" /></span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                      <span>Total funds publicly verifiable by all observers</span>
+                      <span>Total vault <InfoTooltip term="vault" /> funds publicly verifiable by all observers</span>
                     </li>
                   </ul>
                 </div>

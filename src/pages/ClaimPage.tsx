@@ -25,6 +25,7 @@ import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../uti
 import { useWallet } from '../context/WalletContext';
 import { ContributorAllocation, generateRandomHex32, hexToBytes, bytesToHex } from '../utils/contract';
 import { pureCircuits } from '../contract/index.js';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 export interface ClaimTemplate {
   id: string;
@@ -664,9 +665,12 @@ export const ClaimPage: React.FC = () => {
                       {tpl.title}
                     </h4>
 
-                    <div className="font-mono text-lg font-extrabold text-sky-400">
-                      {Number(tpl.amount).toLocaleString()}{' '}
-                      <span className="text-xs font-sans font-normal text-muted">tDUST</span>
+                    <div className="font-mono text-lg font-extrabold text-sky-400 flex items-center gap-1">
+                      <span>{Number(tpl.amount).toLocaleString()}</span>
+                      <span className="text-xs font-sans font-normal text-muted inline-flex items-center gap-0.5">
+                        <span>tDUST</span>
+                        <InfoTooltip term="tDUST" />
+                      </span>
                     </div>
 
                     <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
@@ -676,12 +680,17 @@ export const ClaimPage: React.FC = () => {
 
                   <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
                     <span
-                      className="font-mono text-muted text-[10px] truncate max-w-[130px]"
+                      className="font-mono text-muted text-[10px] truncate max-w-[140px] inline-flex items-center gap-0.5"
                       title={tpl.commitment ? `Commitment: 0x${tpl.commitment}` : undefined}
                     >
-                      {tpl.commitment
-                        ? `comm: 0x${tpl.commitment.slice(0, 6)}...`
-                        : `seed: ${tpl.seed.slice(0, 6)}...`}
+                      {tpl.commitment ? (
+                        <>
+                          <span>comm: 0x{tpl.commitment.slice(0, 6)}...</span>
+                          <InfoTooltip term="commitment" />
+                        </>
+                      ) : (
+                        `seed: ${tpl.seed.slice(0, 6)}...`
+                      )}
                     </span>
                     <span
                       className={`font-semibold flex items-center gap-1 ${
@@ -747,7 +756,10 @@ export const ClaimPage: React.FC = () => {
                 <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-text">On-Chain Commitment Verified</span>
+                    <span className="font-bold text-text inline-flex items-center gap-1">
+                      <span>On-Chain Commitment Verified</span>
+                      <InfoTooltip term="commitment" />
+                    </span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                       Active in Contract Set
                     </span>
@@ -837,7 +849,10 @@ export const ClaimPage: React.FC = () => {
           {/* Amount & Salt */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="editorial-label">Allocated Payout Amount (tDUST)</label>
+              <label className="editorial-label inline-flex items-center gap-1">
+                <span>Allocated Payout Amount (tDUST)</span>
+                <InfoTooltip term="tDUST" />
+              </label>
               <input
                 type="number"
                 min="1"
@@ -850,7 +865,10 @@ export const ClaimPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="editorial-label">Cryptographic Blinding Salt (32-byte Hex)</label>
+              <label className="editorial-label inline-flex items-center gap-1">
+                <span>Cryptographic Blinding Salt (32-byte Hex)</span>
+                <InfoTooltip term="salt" />
+              </label>
               <input
                 type="text"
                 required
@@ -864,7 +882,10 @@ export const ClaimPage: React.FC = () => {
 
           {/* Distribution Batch ID */}
           <div>
-            <label className="editorial-label">Distribution Batch ID</label>
+            <label className="editorial-label inline-flex items-center gap-1">
+              <span>Distribution Batch ID</span>
+              <InfoTooltip term="distribution ID" />
+            </label>
             <input
               type="text"
               required
@@ -878,7 +899,10 @@ export const ClaimPage: React.FC = () => {
           {/* Nullifier Secret */}
           <div>
             <label className="editorial-label flex items-center justify-between">
-              <span>Nullifier Spending Key (Auto-Generated Entropy)</span>
+              <span className="inline-flex items-center gap-1">
+                <span>Nullifier Spending Key (Auto-Generated Entropy)</span>
+                <InfoTooltip term="nullifier" />
+              </span>
               <span className="text-[10px] font-mono text-muted lowercase">ensures un-linkability</span>
             </label>
             <input
@@ -894,8 +918,8 @@ export const ClaimPage: React.FC = () => {
           <div className="p-4 rounded bg-surface-hover border border-border flex items-start gap-3 text-xs text-muted">
             <Lock size={16} className="text-sky-400 mt-0.5 shrink-0" />
             <p className="leading-relaxed">
-              <strong>Zero Witness Leakage Guarantee:</strong> Your secret passphrase, salt, and amount never leave your local browser runtime.
-              Midnight's circuit generates a mathematical zero-knowledge proof proving entitlement against the on-chain commitment set.
+              <strong>Zero Witness Leakage Guarantee:</strong> Your secret passphrase, salt <InfoTooltip term="salt" />, and amount never leave your local browser runtime.
+              Midnight's circuit generates a mathematical zero-knowledge proof proving entitlement against the on-chain commitment <InfoTooltip term="commitment" /> set.
             </p>
           </div>
 
@@ -966,7 +990,10 @@ export const ClaimPage: React.FC = () => {
 
               <div className="space-y-2 font-mono text-xs pt-2 border-t border-emerald-500/20">
                 <div className="p-3 bg-surface border border-border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span className="text-muted font-sans text-[11px]">Unlinkable Nullifier:</span>
+                  <span className="text-muted font-sans text-[11px] inline-flex items-center gap-1">
+                    <span>Unlinkable Nullifier:</span>
+                    <InfoTooltip term="nullifier" />
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-text break-all">{claimResult.nullifier}</span>
                     <button
@@ -980,7 +1007,10 @@ export const ClaimPage: React.FC = () => {
                 </div>
 
                 <div className="p-3 bg-surface border border-border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span className="text-muted font-sans text-[11px]">Committed Leaf:</span>
+                  <span className="text-muted font-sans text-[11px] inline-flex items-center gap-1">
+                    <span>Committed Leaf:</span>
+                    <InfoTooltip term="commitment" />
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-text break-all">{claimResult.commitment}</span>
                     <button
@@ -1038,7 +1068,7 @@ export const ClaimPage: React.FC = () => {
 
               <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
                 <p className="text-xs text-emerald-300 italic">
-                  Nullifier published to prevent double spending. Recipient identity and amount ({amount} tDUST) remain strictly secret.
+                  Nullifier <InfoTooltip term="nullifier" /> published to prevent double spending. Recipient identity and amount ({amount} tDUST <InfoTooltip term="tDUST" />) remain strictly secret.
                 </p>
                 <Link
                   to="/vault"

@@ -4,6 +4,7 @@ import { Sun, Moon, Wallet, Menu, X, ChevronDown, LogOut, Copy, Check } from 'lu
 import { useTheme } from '../../context/ThemeContext';
 import { useWallet } from '../../context/WalletContext';
 import logoImg from '../../../assets/logo.png';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 interface NavbarProps {
   onOpenMobileMenu: () => void;
@@ -145,8 +146,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                         {wallet.isSimulated ? 'Simulated' : 'Connected'}
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-text text-sm">
-                      {Number(wallet.balance).toLocaleString()} tDUST
+                    <span className="font-mono font-bold text-text text-sm inline-flex items-center gap-1">
+                      <span>{Number(wallet.balance).toLocaleString()} tDUST</span>
+                      <InfoTooltip term="tDUST" />
                     </span>
                   </div>
 

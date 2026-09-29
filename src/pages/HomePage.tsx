@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { TiltedCard } from '../components/common/TiltedCard';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 export const HomePage: React.FC = () => {
   const scrollToPrivacy = () => {
@@ -127,7 +128,7 @@ export const HomePage: React.FC = () => {
               <span className="font-display font-extrabold text-3xl text-sky-400">01</span>
               <h3 className="font-bold text-lg text-text">Create Distribution</h3>
               <p className="text-sm text-muted leading-relaxed">
-                The organizer registers opaque 32-byte cryptographic commitments for each recipient on the Midnight ledger.
+                The organizer registers opaque 32-byte cryptographic commitments <InfoTooltip term="commitment" /> for each recipient on the Midnight ledger.
               </p>
             </div>
             <div className="pt-4 border-t border-border text-xs font-mono text-muted">
@@ -139,9 +140,12 @@ export const HomePage: React.FC = () => {
           <div className="sharp-card p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <span className="font-display font-extrabold text-3xl text-sky-400">02</span>
-              <h3 className="font-bold text-lg text-text">Fund the Vault</h3>
+              <h3 className="font-bold text-lg text-text inline-flex items-center gap-1.5">
+                <span>Fund the Vault</span>
+                <InfoTooltip term="vault" />
+              </h3>
               <p className="text-sm text-muted leading-relaxed">
-                Aggregate distribution funds are locked in the smart contract vault. Only the total pool balance is visible on-chain.
+                Aggregate distribution funds are locked in the smart contract vault <InfoTooltip term="vault" />. Only the total pool balance is visible on-chain.
               </p>
             </div>
             <div className="pt-4 border-t border-border text-xs font-mono text-muted">
@@ -169,7 +173,7 @@ export const HomePage: React.FC = () => {
               <span className="font-display font-extrabold text-3xl text-sky-400">04</span>
               <h3 className="font-bold text-lg text-text">Anyone Verifies</h3>
               <p className="text-sm text-muted leading-relaxed">
-                Observers verify the proof validity and spent nullifier to ensure accounting consistency and prevent double claims.
+                Observers verify the proof validity and spent nullifier <InfoTooltip term="nullifier" /> to ensure accounting consistency and prevent double claims.
               </p>
             </div>
             <div className="pt-4 border-t border-border text-xs font-mono text-muted">
@@ -219,19 +223,19 @@ export const HomePage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Unique distribution batch ID (<code className="font-mono text-text">distributionId</code>)</span>
+                <span>Unique distribution batch ID (<code className="font-mono text-text">distributionId</code>) <InfoTooltip term="distribution ID" /></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Total aggregate funds locked in the vault (<code className="font-mono text-text">totalVaultFunds</code>)</span>
+                <span>Total aggregate funds locked in the vault (<code className="font-mono text-text">totalVaultFunds</code>) <InfoTooltip term="vault" /></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Set of 32-byte opaque allocation commitments (<code className="font-mono text-text">allocationCommitments</code>)</span>
+                <span>Set of 32-byte opaque allocation commitments (<code className="font-mono text-text">allocationCommitments</code>) <InfoTooltip term="commitment" /></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-                <span>Set of spent claim nullifiers (<code className="font-mono text-text">claimedNullifiers</code>)</span>
+                <span>Set of spent claim nullifiers (<code className="font-mono text-text">claimedNullifiers</code>) <InfoTooltip term="nullifier" /></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
@@ -267,7 +271,7 @@ export const HomePage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
-                <span>256-bit cryptographic blinding salt (<code className="font-mono text-text">allocationSalt</code>)</span>
+                <span>256-bit cryptographic blinding salt (<code className="font-mono text-text">allocationSalt</code>) <InfoTooltip term="salt" /></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-pink-400 mt-0.5 shrink-0" />
@@ -299,11 +303,11 @@ export const HomePage: React.FC = () => {
             <ul className="space-y-2.5 text-xs text-muted list-none p-0">
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>Knowledge of valid tuple whose commitment exists in <code className="font-mono text-text">allocationCommitments</code></span>
+                <span>Knowledge of valid tuple whose commitment <InfoTooltip term="commitment" /> exists in <code className="font-mono text-text">allocationCommitments</code></span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-                <span>Derived nullifier is correct for the commitment and unspent</span>
+                <span>Derived nullifier <InfoTooltip term="nullifier" /> is correct for the commitment and unspent</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 shrink-0" />
@@ -347,7 +351,7 @@ export const HomePage: React.FC = () => {
             </div>
             <h3 className="font-display font-bold text-xl text-text">Fixed Shares</h3>
             <p className="text-xs text-muted leading-relaxed">
-              Define exact payout quantities in tDUST per contributor. Each recipient receives a private blinding salt and derives their opaque commitment leaf.
+              Define exact payout quantities in tDUST <InfoTooltip term="tDUST" /> per contributor. Each recipient receives a private blinding salt <InfoTooltip term="salt" /> and derives their opaque commitment <InfoTooltip term="commitment" /> leaf.
             </p>
           </div>
 
@@ -363,7 +367,7 @@ export const HomePage: React.FC = () => {
             </div>
             <h3 className="font-display font-bold text-xl text-text">Percentage Splits</h3>
             <p className="text-xs text-muted leading-relaxed">
-              Proportional distribution of total vault funds based on percentage allocation rules calculated at batch creation time.
+              Proportional distribution of total vault <InfoTooltip term="vault" /> funds based on percentage allocation rules calculated at batch creation time.
             </p>
           </div>
 

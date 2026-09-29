@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Wallet, ExternalLink, X, ShieldCheck, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
 import { getNetworkConfig } from '../../midnight/config';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 export const WalletModal: React.FC = () => {
   const wallet = useWallet();
@@ -109,7 +110,7 @@ export const WalletModal: React.FC = () => {
                   1AM Wallet Not Detected
                 </h4>
                 <p className="text-xs text-muted max-w-xs mx-auto">
-                  To sign real zero-knowledge proofs and deploy distribution vaults on Midnight Preprod, please install or unlock the 1AM Wallet extension.
+                  To sign real zero-knowledge proofs and deploy distribution vaults <InfoTooltip term="vault" /> on Midnight Preprod, please install or unlock the 1AM Wallet extension.
                 </p>
               </div>
 
@@ -157,15 +158,18 @@ export const WalletModal: React.FC = () => {
             <span className="text-[11px]">Private keys stay on device</span>
           </div>
 
-          <a
-            href={netConfig.faucetUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline font-mono"
-          >
-            <span>Get Preprod tDUST</span>
-            <ExternalLink size={11} />
-          </a>
+          <div className="inline-flex items-center gap-1">
+            <a
+              href={netConfig.faucetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline font-mono"
+            >
+              <span>Get Preprod tDUST</span>
+              <ExternalLink size={11} />
+            </a>
+            <InfoTooltip term="tDUST" />
+          </div>
         </div>
       </div>
     </div>
