@@ -5,6 +5,7 @@
 # VaultSplitX
 
 ![CI](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml/badge.svg?branch=main)
+[![Try it live](https://img.shields.io/badge/Try_it-live-brightgreen)](https://vaultsplitx.vercel.app)
 
 > A privacy-preserving payment distribution dApp built on Midnight that enables organizations to disburse shared funds without publicly exposing individual payment amounts.
 
@@ -161,7 +162,3 @@ VaultSplitX uses GitHub Actions for continuous integration. On every push and pu
 ## Usage Guide
 
 See [docs/USAGE.md](docs/USAGE.md) for a comprehensive, non-technical step-by-step user manual and troubleshooting tips.
-
-## Product X Profile
-
-Follow VaultSplitX on X: [https://x.com/VaultSplitX](https://x.com/VaultSplitX)
