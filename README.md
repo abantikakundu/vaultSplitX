@@ -11,7 +11,7 @@
 
 ## Submission Checklist
 
-- [x] **Public GitHub repository with updated documentation:** [abantikakundu/vaultSplitX](https://github.com/abantikakundu/vaultSplitX) (see [docs/USAGE.md](docs/USAGE.md))
+- [x] **Public GitHub repository with updated documentation:** [abantikakundu/vaultSplitX](https://github.com/abantikakundu/vaultSplitX) (see [docs/USAGE.md](docs/USAGE.md), [docs/architecture.md](docs/architecture.md), & [docs/security.md](docs/security.md))
 - [x] **Live demo link:** [https://vaultsplitx.vercel.app](https://vaultsplitx.vercel.app) & [Deployed Preprod Contract (`0xff4cc6...`)](#contract-address)
 - [x] **List of 50 Preprod user wallet addresses (verifiable on-chain):** [USERS.md](USERS.md) (50 verified testnet users with 80+ Preprod transactions on Subscan)
 - [x] **Feedback documentation or link to feedback document:** [FEEDBACK.md](FEEDBACK.md) (10 community feedback improvements resolved with commit proof)
@@ -95,6 +95,8 @@ Participants privately prove their entitlement to a specific payout using client
   - The claimant proves that their generated nullifier is correctly derived and has not already been recorded in `claimedNullifiers`.
   - Observers learn only that an authorized participant claimed their valid share; no observer can determine who claimed, what amount they received, or link their wallet to any individual allocation commitment.
 
+> For full cryptographic formulas, domain separation vectors, mathematical invariants, and anti-fraud threat analysis, see [docs/security.md](docs/security.md).
+
 ## Tech Stack
 
 - **Smart Contracts:** Midnight Compact (`contracts/vaultSplitX.compact`, version 0.23)
@@ -164,6 +166,8 @@ VaultSplitX uses GitHub Actions for continuous integration. On every push and pu
 5. Executes all automated Vitest tests.
 6. Builds the production frontend bundle (`npm run build`) ensuring zero errors.
 
-## Usage Guide
+## Documentation & Architecture
 
-See [docs/USAGE.md](docs/USAGE.md) for a comprehensive, non-technical step-by-step user manual and troubleshooting tips.
+- **System Architecture:** Detailed architectural diagrams, zero-knowledge circuits, state machine transitions, and cryptographic invariant specifications: [docs/architecture.md](docs/architecture.md)
+- **Security Policy & Cryptographic Model:** Core security guarantees, threat mitigations, and privacy proofs: [docs/security.md](docs/security.md)
+- **Usage Guide:** Comprehensive, non-technical step-by-step user manual and troubleshooting tips: [docs/USAGE.md](docs/USAGE.md)
