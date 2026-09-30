@@ -3,6 +3,7 @@ import { NavLink, Link } from 'react-router-dom';
 import { X, ExternalLink, ShieldCheck, Sun, Moon, Copy, Check, LogOut, Wallet } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useWallet } from '../../context/WalletContext';
+import { useToast } from '../../context/ToastContext';
 import { NETWORK_CONFIG } from '../../utils/config';
 import { shortenAddress } from '../../midnight/wallet';
 import logoImg from '../../../assets/logo.png';
@@ -15,6 +16,7 @@ interface MobileDrawerProps {
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
   const wallet = useWallet();
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
 
   const handleCopyAddress = () => {
@@ -22,6 +24,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
       navigator.clipboard.writeText(wallet.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.info('Wallet address copied to clipboard!');
     }
   };
 
@@ -189,6 +192,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
               <button
                 onClick={() => {
                   wallet.disconnectWallet();
+                  toast.info('Midnight wallet disconnected.', { title: 'Wallet Disconnected' });
                   onClose();
                 }}
                 className="w-full btn-pill py-2 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-1.5 cursor-pointer"
@@ -200,9 +204,14 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
             </div>
           ) : (
             <button
-              onClick={() => {
-                wallet.connectWallet(false).catch(() => {});
-                onClose();
+              onClick={async () => {
+                try {
+                  await wallet.connectWallet(false);
+                  toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                  onClose();
+                } catch (err) {
+                  toast.error(err, { title: 'Wallet Connection Failed' });
+                }
               }}
               className="btn-pill btn-pill-sky w-full py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
             >

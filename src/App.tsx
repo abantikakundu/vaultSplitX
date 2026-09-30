@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import { WalletProvider } from './context/WalletContext';
 import { VaultProvider } from './context/VaultContext';
 import { AppShell } from './components/shell/AppShell';
@@ -17,24 +18,26 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ de
 export const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <WalletProvider>
-        <VaultProvider>
-          <BrowserRouter>
-            <AppShell>
-              <Suspense fallback={<PageSkeleton />}>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/vault" element={<VaultPage />} />
-                  <Route path="/create" element={<CreatePage />} />
-                  <Route path="/claim" element={<ClaimPage />} />
-                  <Route path="/verify" element={<VerifyPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </Suspense>
-            </AppShell>
-          </BrowserRouter>
-        </VaultProvider>
-      </WalletProvider>
+      <ToastProvider>
+        <WalletProvider>
+          <VaultProvider>
+            <BrowserRouter>
+              <AppShell>
+                <Suspense fallback={<PageSkeleton />}>
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/vault" element={<VaultPage />} />
+                    <Route path="/create" element={<CreatePage />} />
+                    <Route path="/claim" element={<ClaimPage />} />
+                    <Route path="/verify" element={<VerifyPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Routes>
+                </Suspense>
+              </AppShell>
+            </BrowserRouter>
+          </VaultProvider>
+        </WalletProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 };

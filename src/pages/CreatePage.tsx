@@ -16,9 +16,12 @@ import {
   ExternalLink,
   RefreshCw,
   Info,
+  Copy,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
+import { useToast } from '../context/ToastContext';
+import { formatHumanReadableError } from '../utils/formatError';
 import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
@@ -43,6 +46,7 @@ export const CreatePage: React.FC = () => {
     resetOrganizerSecret,
   } = useVault();
   const wallet = useWallet();
+  const toast = useToast();
   const targetContractAddress =
     vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
 
@@ -155,7 +159,9 @@ export const CreatePage: React.FC = () => {
     e.preventDefault();
     if (isSubmitting || isProving) return;
     if (!isAllocationBalanced) {
-      setSubmitError('The total allocated amount must equal the total vault funds.');
+      const msg = 'The total allocated amount must equal the total vault funds.';
+      setSubmitError(msg);
+      toast.error(msg, { title: 'Unbalanced Allocation' });
       return;
     }
 
@@ -172,7 +178,8 @@ export const CreatePage: React.FC = () => {
           }
           activeApi = connected.connectedApi;
         } catch (connErr) {
-          const cMsg = (connErr as Error)?.message || '1AM Wallet connection failed or was rejected.';
+          toast.error(connErr, { title: 'Wallet Connection Required' });
+          const cMsg = formatHumanReadableError(connErr, 'Wallet connection');
           setSubmitError(cMsg);
           return;
         }
@@ -202,8 +209,14 @@ export const CreatePage: React.FC = () => {
       const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload, activeApi);
       setCreatedResult(res);
       setSubmitSuccess(true);
+      toast.success('Distribution batch registered successfully on Midnight Preprod!', {
+        title: 'Distribution Created',
+        txHash: res.txHash,
+      });
     }).catch((err: unknown) => {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to register distribution batch');
+      toast.error(err, { title: 'Distribution Failed' });
+      const humanMsg = formatHumanReadableError(err, 'Distribution registration');
+      setSubmitError(humanMsg);
     });
   };
 
@@ -290,6 +303,9 @@ export const CreatePage: React.FC = () => {
               onClick={() => {
                 resetOrganizerSecret();
                 setSubmitError(null);
+                toast.info('Organizer credentials reset to contract defaults.', {
+                  title: 'Credentials Reset',
+                });
               }}
               title="Reset organizer credentials to contract defaults"
               className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 text-muted hover:text-text cursor-pointer"
@@ -732,14 +748,28 @@ export const CreatePage: React.FC = () => {
                         </a>
                         <button
                           type="button"
-                          onClick={() => wallet.connectWallet(false).catch(() => {})}
+                          onClick={async () => {
+                            try {
+                              await wallet.connectWallet(false);
+                              toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                            } catch (err) {
+                              toast.error(err, { title: 'Wallet Connection Failed' });
+                            }
+                          }}
                           className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
                         >
                           Try again
                         </button>
                         <button
                           type="button"
-                          onClick={() => wallet.connectWallet('demo')}
+                          onClick={async () => {
+                            try {
+                              await wallet.connectWallet('demo');
+                              toast.info('Switched to Demo Simulator mode.', { title: 'Demo Mode' });
+                            } catch (err) {
+                              toast.error(err, { title: 'Simulation Error' });
+                            }
+                          }}
                           className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
                         >
                           or switch to Demo Simulator
@@ -764,7 +794,21 @@ export const CreatePage: React.FC = () => {
                     {/* Contract Address Block */}
                     <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
                       <div>
-                        <span className="text-muted text-[11px] block font-sans">Smart Contract:</span>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-muted text-[11px] block font-sans">Smart Contract:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`0x${targetContractAddress.replace(/^0x/, '')}`);
+                              toast.info('Contract address copied to clipboard!');
+                            }}
+                            className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                            title="Copy contract address"
+                          >
+                            <Copy size={12} />
+                            <span>Copy</span>
+                          </button>
+                        </div>
                         <span className="font-mono text-text break-all">
                           0x{targetContractAddress.replace(/^0x/, '')}
                         </span>
@@ -784,7 +828,21 @@ export const CreatePage: React.FC = () => {
                     {createdResult?.txHash && (
                       <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
                         <div>
-                          <span className="text-muted text-[11px] block font-sans">Transaction Hash (Contract Call):</span>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-muted text-[11px] block font-sans">Transaction Hash:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`0x${createdResult.txHash!.replace(/^0x/, '')}`);
+                                toast.info('Transaction hash copied to clipboard!');
+                              }}
+                              className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                              title="Copy transaction hash"
+                            >
+                              <Copy size={12} />
+                              <span>Copy</span>
+                            </button>
+                          </div>
                           <span className="font-mono text-text break-all">
                             0x{createdResult.txHash.replace(/^0x/, '')}
                           </span>
@@ -795,7 +853,7 @@ export const CreatePage: React.FC = () => {
                           rel="noreferrer"
                           className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
                         >
-                          <span>Tx on 1AM Explorer</span>
+                          <span>View on explorer</span>
                           <ExternalLink size={12} />
                         </a>
                       </div>

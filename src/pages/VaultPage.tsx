@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
+import { useToast } from '../context/ToastContext';
+import { formatHumanReadableError } from '../utils/formatError';
 import { getExplorerContractUrl, getExplorerTxUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
@@ -38,6 +40,7 @@ export const VaultPage: React.FC = () => {
     lastTxExplorerUrl,
   } = useVault();
   const wallet = useWallet();
+  const toast = useToast();
 
   // Action state managers
   const addAllocAction = useProofAction();
@@ -48,24 +51,34 @@ export const VaultPage: React.FC = () => {
   const [newRole, setNewRole] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newSeed, setNewSeed] = useState('');
-  const isAdding = addAllocAction.isProcessing;
   const [addError, setAddError] = useState<string | null>(null);
 
   // Close distribution confirmation
-  const isClosing = closeAction.isProcessing;
   const [copiedCommitment, setCopiedCommitment] = useState<string | null>(null);
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (text: string, label = 'Commitment') => {
     navigator.clipboard.writeText(text);
     setCopiedCommitment(text);
     setTimeout(() => setCopiedCommitment(null), 2000);
+    toast.info(`${label} copied to clipboard!`);
+  };
+
+  const handleSync = async () => {
+    try {
+      await refreshVaultState();
+      toast.info('Vault state synced with Midnight indexer.', { title: 'Indexer Synced' });
+    } catch (err) {
+      toast.error(err, { title: 'Sync Failed' });
+    }
   };
 
   const handleAddNewAllocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (addAllocAction.isProcessing || isProving) return;
     if (!newAmount || BigInt(newAmount) <= 0n) {
-      setAddError('Amount must be greater than zero.');
+      const msg = 'Amount must be greater than zero.';
+      setAddError(msg);
+      toast.error(msg, { title: 'Invalid Amount' });
       return;
     }
 
@@ -77,13 +90,18 @@ export const VaultPage: React.FC = () => {
         const connected = await wallet.connectWallet(false);
         activeApi = connected?.connectedApi ?? null;
       }
-      await registerAllocation(newRole || 'Contributor', BigInt(newAmount), newSeed, activeApi);
+      const res = await registerAllocation(newRole || 'Contributor', BigInt(newAmount), newSeed, activeApi);
       setNewRole('');
       setNewAmount('');
       setNewSeed('');
       setShowAddModal(false);
+      toast.success('Allocation successfully registered on-chain!', {
+        title: 'Allocation Registered',
+        txHash: res?.txHash,
+      });
     }).catch((err: unknown) => {
-      setAddError(err instanceof Error ? err.message : 'Failed to register allocation.');
+      toast.error(err, { title: 'Registration Failed' });
+      setAddError(formatHumanReadableError(err, 'Allocation registration'));
     });
   };
 
@@ -99,9 +117,13 @@ export const VaultPage: React.FC = () => {
         const connected = await wallet.connectWallet(false);
         activeApi = connected?.connectedApi ?? null;
       }
-      await closeDistribution(activeApi);
+      const res = await closeDistribution(activeApi);
+      toast.success('Distribution batch permanently closed on Midnight Preprod.', {
+        title: 'Distribution Closed',
+        txHash: res?.txHash,
+      });
     }).catch((err: unknown) => {
-      alert(err instanceof Error ? err.message : 'Failed to close distribution.');
+      toast.error(err, { title: 'Close Failed' });
     });
   };
 
@@ -170,9 +192,9 @@ export const VaultPage: React.FC = () => {
           {/* Organizer Quick Actions */}
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => refreshVaultState()}
+              onClick={handleSync}
               disabled={isSyncing}
-              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5"
+              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
               title="Refresh live state from Midnight indexer"
             >
               <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} />
@@ -183,7 +205,7 @@ export const VaultPage: React.FC = () => {
               <>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5"
+                  className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>Register Allocation</span>
@@ -195,7 +217,7 @@ export const VaultPage: React.FC = () => {
                   isProcessing={closeAction.isProcessing}
                   elapsedSeconds={closeAction.elapsedSeconds}
                   disabled={isProving || addAllocAction.isProcessing}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 text-rose-400 hover:border-rose-400"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 text-rose-400 hover:border-rose-400 cursor-pointer"
                 >
                   <Lock size={14} />
                   <span>Close Distribution</span>
@@ -238,9 +260,23 @@ export const VaultPage: React.FC = () => {
                 <Check size={16} />
                 <span>Midnight Preprod Transaction Broadcast</span>
               </span>
-              <span className="font-mono text-xs text-text break-all">
-                0x{lastTxHash.replace(/^0x/, '')}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-text break-all">
+                  0x{lastTxHash.replace(/^0x/, '')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`0x${lastTxHash.replace(/^0x/, '')}`);
+                    toast.info('Transaction hash copied to clipboard!');
+                  }}
+                  className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                  title="Copy transaction hash"
+                >
+                  <Copy size={12} />
+                  <span>Copy</span>
+                </button>
+              </div>
             </div>
             {lastTxExplorerUrl && (
               <a
@@ -249,7 +285,7 @@ export const VaultPage: React.FC = () => {
                 rel="noreferrer"
                 className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
               >
-                <span>Verify on 1AM Explorer</span>
+                <span>View on explorer</span>
                 <ExternalLink size={13} />
               </a>
             )}
@@ -363,7 +399,14 @@ export const VaultPage: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => wallet.connectWallet(false).catch(() => {})}
+              onClick={async () => {
+                try {
+                  await wallet.connectWallet(false);
+                  toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                } catch (err) {
+                  toast.error(err, { title: 'Wallet Connection Failed' });
+                }
+              }}
               className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 cursor-pointer"
             >
               Connect Midnight Lace
@@ -402,16 +445,29 @@ export const VaultPage: React.FC = () => {
 
                   <div className="flex items-center gap-2">
                     {alloc.txHash && (
-                      <a
-                        href={getExplorerTxUrl(alloc.txHash, wallet.network || 'preprod')}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:underline px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20"
-                        title="View registration transaction in 1AM explorer"
-                      >
-                        <span>tx: {alloc.txHash.slice(0, 8)}...</span>
-                        <ExternalLink size={10} />
-                      </a>
+                      <div className="inline-flex items-center gap-1">
+                        <a
+                          href={getExplorerTxUrl(alloc.txHash, wallet.network || 'preprod')}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:underline px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20"
+                          title="View on explorer"
+                        >
+                          <span>tx: {alloc.txHash.slice(0, 8)}...</span>
+                          <ExternalLink size={10} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`0x${alloc.txHash!.replace(/^0x/, '')}`);
+                            toast.info('Transaction hash copied to clipboard!');
+                          }}
+                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors"
+                          title="Copy transaction hash"
+                        >
+                          <Copy size={11} />
+                        </button>
+                      </div>
                     )}
                     {alloc.claimed ? (
                       <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
@@ -530,6 +586,9 @@ export const VaultPage: React.FC = () => {
                       onClick={() => {
                         resetOrganizerSecret();
                         setAddError(null);
+                        toast.info('Organizer credentials reset to contract defaults.', {
+                          title: 'Credentials Reset',
+                        });
                       }}
                       className="btn-pill btn-pill-sky text-xs py-1 px-3 font-semibold cursor-pointer"
                     >

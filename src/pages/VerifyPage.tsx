@@ -11,17 +11,31 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
+import { useToast } from '../context/ToastContext';
 import { NETWORK_CONFIG } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 
 export const VerifyPage: React.FC = () => {
   const { vaultState, refreshVaultState, isSyncing } = useVault();
+  const toast = useToast();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const handleCopy = (text: string, key: string) => {
+  const handleCopy = (text: string, key: string, label = 'Parameter') => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
+    toast.info(`${label} copied to clipboard!`);
+  };
+
+  const handleSync = async () => {
+    try {
+      await refreshVaultState();
+      toast.info('Audit parameters refreshed from Midnight GraphQL indexer.', {
+        title: 'Indexer Synced',
+      });
+    } catch (err) {
+      toast.error(err, { title: 'Sync Failed' });
+    }
   };
 
   const organizerKey = vaultState?.organizerKey || '';
@@ -59,7 +73,7 @@ export const VerifyPage: React.FC = () => {
           {/* Quick Explorer Link Chip and Sync */}
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => refreshVaultState()}
+              onClick={handleSync}
               disabled={isSyncing}
               className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
               title="Refresh live parameters from Midnight GraphQL indexer"
@@ -109,7 +123,7 @@ export const VerifyPage: React.FC = () => {
                   <td className="py-3.5 px-5 text-text break-all max-w-xs">{organizerKey}</td>
                   <td className="py-3.5 px-5 text-right">
                     <button
-                      onClick={() => handleCopy(organizerKey, 'organizer')}
+                      onClick={() => handleCopy(organizerKey, 'organizer', 'Organizer Key')}
                       className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
                       title="Copy organizer key"
                     >
@@ -130,7 +144,7 @@ export const VerifyPage: React.FC = () => {
                   <td className="py-3.5 px-5 text-text break-all max-w-xs">{distId}</td>
                   <td className="py-3.5 px-5 text-right">
                     <button
-                      onClick={() => handleCopy(distId, 'distId')}
+                      onClick={() => handleCopy(distId, 'distId', 'Distribution ID')}
                       className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
                       title="Copy distribution ID"
                     >
@@ -156,7 +170,7 @@ export const VerifyPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-5 text-right">
                     <button
-                      onClick={() => handleCopy(totalFunds.toString(), 'funds')}
+                      onClick={() => handleCopy(totalFunds.toString(), 'funds', 'Total Vault Funds')}
                       className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
                     >
                       {copiedKey === 'funds' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
@@ -308,7 +322,7 @@ export const VerifyPage: React.FC = () => {
                     <span className="truncate">{comm}</span>
                   </div>
                   <button
-                    onClick={() => handleCopy(comm, `comm-${idx}`)}
+                    onClick={() => handleCopy(comm, `comm-${idx}`, `Commitment #${idx + 1}`)}
                     className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0"
                     title="Copy commitment"
                   >
@@ -350,7 +364,7 @@ export const VerifyPage: React.FC = () => {
                       <span className="truncate">{nullifier}</span>
                     </div>
                     <button
-                      onClick={() => handleCopy(nullifier, `null-${idx}`)}
+                      onClick={() => handleCopy(nullifier, `null-${idx}`, `Nullifier #${idx + 1}`)}
                       className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0"
                       title="Copy nullifier"
                     >

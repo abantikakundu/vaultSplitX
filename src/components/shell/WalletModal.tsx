@@ -14,6 +14,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
+import { useToast } from '../../context/ToastContext';
 import { getNetworkConfig } from '../../midnight/config';
 import {
   LACE_INSTALL_URL,
@@ -23,6 +24,7 @@ import { InfoTooltip } from '../common/InfoTooltip';
 
 export const WalletModal: React.FC = () => {
   const wallet = useWallet();
+  const toast = useToast();
   const netConfig = getNetworkConfig(wallet.network || 'preprod');
   const [copied, setCopied] = useState(false);
 
@@ -42,6 +44,7 @@ export const WalletModal: React.FC = () => {
       navigator.clipboard.writeText(wallet.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.info('Wallet address copied to clipboard!');
     }
   };
 
@@ -167,6 +170,7 @@ export const WalletModal: React.FC = () => {
                   type="button"
                   onClick={() => {
                     wallet.disconnectWallet();
+                    toast.info('Midnight wallet disconnected.', { title: 'Wallet Disconnected' });
                   }}
                   className="btn-pill py-2 px-4 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-2 flex-1 cursor-pointer transition-colors"
                   aria-label="Disconnect wallet"
@@ -212,7 +216,14 @@ export const WalletModal: React.FC = () => {
                   <div className="pt-1 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      onClick={async () => {
+                        try {
+                          await wallet.connectWallet(false);
+                          toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                        } catch (err) {
+                          toast.error(err, { title: 'Wallet Connection Failed' });
+                        }
+                      }}
                       disabled={wallet.isConnecting}
                       className="btn-pill btn-pill-rose text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold cursor-pointer transition-all"
                     >
@@ -271,7 +282,14 @@ export const WalletModal: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      onClick={async () => {
+                        try {
+                          await wallet.connectWallet(false);
+                          toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                        } catch (err) {
+                          toast.error(err, { title: 'Wallet Connection Failed' });
+                        }
+                      }}
                       disabled={wallet.isConnecting}
                       className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
                     >
@@ -296,7 +314,14 @@ export const WalletModal: React.FC = () => {
                   {wallet.installedWallets.map((w) => (
                     <button
                       key={w.id}
-                      onClick={() => wallet.connectWallet(w.id).catch(() => {})}
+                      onClick={async () => {
+                        try {
+                          await wallet.connectWallet(w.id);
+                          toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                        } catch (err) {
+                          toast.error(err, { title: 'Wallet Connection Failed' });
+                        }
+                      }}
                       disabled={wallet.isConnecting}
                       className="w-full p-4 rounded-md border border-border bg-surface-hover hover:border-sky-400 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer group"
                     >
@@ -333,7 +358,14 @@ export const WalletModal: React.FC = () => {
                 <span className="text-xs text-muted">Want to preview without a wallet?</span>
                 <button
                   type="button"
-                  onClick={() => wallet.connectWallet('demo')}
+                  onClick={async () => {
+                    try {
+                      await wallet.connectWallet('demo');
+                      toast.info('Switched to Demo Simulator mode.', { title: 'Demo Mode' });
+                    } catch (err) {
+                      toast.error(err, { title: 'Simulation Error' });
+                    }
+                  }}
                   className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
                 >
                   Use Demo Simulator

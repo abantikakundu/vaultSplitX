@@ -22,8 +22,10 @@ import {
   Info,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
-import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { useWallet } from '../context/WalletContext';
+import { useToast } from '../context/ToastContext';
+import { formatHumanReadableError } from '../utils/formatError';
+import { NETWORK_CONFIG, getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { ContributorAllocation, generateRandomHex32, hexToBytes, bytesToHex } from '../utils/contract';
 import { pureCircuits } from '../contract/index.js';
 import { InfoTooltip } from '../components/common/InfoTooltip';
@@ -114,6 +116,7 @@ function computeCommitmentHex(
 export const ClaimPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const wallet = useWallet();
+  const toast = useToast();
   const {
     vaultState,
     claimPayout,
@@ -304,6 +307,7 @@ export const ClaimPage: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedField(label);
     setTimeout(() => setCopiedField(null), 2000);
+    toast.info(`${label} copied to clipboard!`);
   };
 
   // -------------------------------------------------------------------------
@@ -312,7 +316,9 @@ export const ClaimPage: React.FC = () => {
   const handleRegisterCurrentAllocation = async (source: 'banner' | 'main' = 'main') => {
     if (registerAction.isProcessing || claimAction.isProcessing || isProving) return;
     if (!recipientSecret || !amount || BigInt(amount) <= 0n || !salt) {
-      alert('Please provide valid recipient secret, amount, and salt to register.');
+      toast.error('Please provide valid recipient secret, amount, and salt to register.', {
+        title: 'Missing Parameters',
+      });
       return;
     }
 
@@ -342,8 +348,12 @@ export const ClaimPage: React.FC = () => {
         `Allocation registered on Midnight Preprod! Commitment: 0x${res.commitment.slice(0, 10)}... (Tx: 0x${res.txHash ? res.txHash.slice(0, 10) : ''}...). Ready to claim!`,
       );
       setTimeout(() => setRegistrationNotice(null), 8000);
+      toast.success('Allocation registered on Midnight Preprod!', {
+        title: 'Allocation Registered',
+        txHash: res.txHash,
+      });
     }).catch((err: unknown) => {
-      alert(err instanceof Error ? err.message : 'Failed to register allocation on-chain.');
+      toast.error(err, { title: 'Registration Failed' });
     });
   };
 
@@ -374,8 +384,12 @@ export const ClaimPage: React.FC = () => {
       setPastedVoucherText('');
       setTemplateLoadedNotice(`Voucher parsed and loaded: ${Number(amt).toLocaleString()} tDUST`);
       setTimeout(() => setTemplateLoadedNotice(null), 4000);
+      toast.success(`Voucher parsed and loaded: ${Number(amt).toLocaleString()} tDUST`, {
+        title: 'Voucher Loaded',
+      });
     } catch (err: unknown) {
-      setVoucherError(err instanceof Error ? err.message : 'Invalid JSON voucher format.');
+      toast.error(err, { title: 'Invalid Voucher' });
+      setVoucherError(formatHumanReadableError(err, 'Voucher parsing'));
     }
   };
 
@@ -412,12 +426,14 @@ export const ClaimPage: React.FC = () => {
     navigator.clipboard.writeText(JSON.stringify(voucherData, null, 2));
     setExportedVoucherNotice(true);
     setTimeout(() => setExportedVoucherNotice(false), 2500);
+    toast.info('Claim voucher JSON copied to clipboard!', { title: 'Voucher Exported' });
   };
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (claimAction.isProcessing || registerAction.isProcessing || isProving) return;
     if (!amount || BigInt(amount) <= 0n) {
+      toast.error('Claim amount must be greater than zero.', { title: 'Invalid Amount' });
       return;
     }
 
@@ -428,8 +444,9 @@ export const ClaimPage: React.FC = () => {
       !vaultState.commitments.some((c) => c.toLowerCase() === currentCommitmentHex.toLowerCase())
     ) {
       clearClaimState();
-      alert(
-        `On-Chain Pre-Check Notice:\n\nThe commitment 0x${currentCommitmentHex.slice(0, 12)}... is not registered in Midnight smart contract 0x${targetContractAddress.slice(0, 8)}... on Preprod.\n\nSubmitting this claim will fail the circuit assert ("No matching allocation found"). Please click "Register to Contract First (1AM Wallet)" first so the smart contract assertion can pass.`
+      toast.error(
+        `The commitment 0x${currentCommitmentHex.slice(0, 10)}... is not registered in Midnight smart contract 0x${targetContractAddress.slice(0, 8)}... on Preprod. Please register first.`,
+        { title: 'Commitment Not Registered' }
       );
       return;
     }
@@ -444,13 +461,18 @@ export const ClaimPage: React.FC = () => {
           }
           activeApi = connected.connectedApi;
         } catch (connErr) {
+          toast.error(connErr, { title: 'Wallet Connection Required' });
           const cMsg = (connErr as Error)?.message || '1AM Wallet connection failed or was rejected.';
           throw new Error(cMsg);
         }
       }
-      await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret, activeApi);
-    }).catch(() => {
-      // Handled in context
+      const res = await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret, activeApi);
+      toast.success('Zero-Knowledge proof verified! Payout claimed on Midnight Preprod.', {
+        title: 'Payout Claimed',
+        txHash: res.txHash,
+      });
+    }).catch((err: unknown) => {
+      toast.error(err, { title: 'Claim Failed' });
     });
   };
 
@@ -459,6 +481,9 @@ export const ClaimPage: React.FC = () => {
     clearClaimState();
     const tampered = (BigInt(amount || '1000') + 10_000n).toString();
     setAmount(tampered);
+    toast.info('Simulated tampered credentials loaded (+10,000 tDUST) to verify ZK circuit rejection.', {
+      title: 'Tamper Simulation',
+    });
   };
 
   return (
@@ -991,14 +1016,28 @@ export const ClaimPage: React.FC = () => {
                     </a>
                     <button
                       type="button"
-                      onClick={() => wallet.connectWallet(false).catch(() => {})}
+                      onClick={async () => {
+                        try {
+                          await wallet.connectWallet(false);
+                          toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                        } catch (err) {
+                          toast.error(err, { title: 'Wallet Connection Failed' });
+                        }
+                      }}
                       className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
                     >
                       Try again
                     </button>
                     <button
                       type="button"
-                      onClick={() => wallet.connectWallet('demo')}
+                      onClick={async () => {
+                        try {
+                          await wallet.connectWallet('demo');
+                          toast.info('Switched to Demo Simulator mode.', { title: 'Demo Mode' });
+                        } catch (err) {
+                          toast.error(err, { title: 'Simulation Error' });
+                        }
+                      }}
                       className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
                     >
                       or switch to Demo Simulator
@@ -1080,7 +1119,21 @@ export const ClaimPage: React.FC = () => {
                 {claimResult.txHash && (
                   <div className="p-3 bg-surface border border-border rounded flex flex-col justify-between gap-2 text-xs">
                     <div>
-                      <span className="text-muted text-[11px] block font-sans">Transaction Hash (claimPayout):</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-muted text-[11px] block font-sans">Transaction Hash (claimPayout):</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`0x${claimResult.txHash!.replace(/^0x/, '')}`);
+                            toast.info('Transaction hash copied to clipboard!');
+                          }}
+                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                          title="Copy transaction hash"
+                        >
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </button>
+                      </div>
                       <span className="font-mono text-text break-all">
                         0x{claimResult.txHash.replace(/^0x/, '')}
                       </span>
@@ -1091,7 +1144,7 @@ export const ClaimPage: React.FC = () => {
                       rel="noreferrer"
                       className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
                     >
-                      <span>Tx on 1AM Explorer</span>
+                      <span>View on explorer</span>
                       <ExternalLink size={12} />
                     </a>
                   </div>

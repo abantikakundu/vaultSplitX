@@ -3,6 +3,7 @@ import { NavLink, Link } from 'react-router-dom';
 import { Sun, Moon, Wallet, Menu, X, ChevronDown, LogOut, Copy, Check } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useWallet } from '../../context/WalletContext';
+import { useToast } from '../../context/ToastContext';
 import logoImg from '../../../assets/logo.png';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { shortenAddress } from '../../midnight/wallet';
@@ -15,6 +16,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen }) => {
   const { theme, setTheme } = useTheme();
   const wallet = useWallet();
+  const toast = useToast();
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -35,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
       navigator.clipboard.writeText(wallet.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.info('Wallet address copied to clipboard!');
     }
   };
 
@@ -203,6 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                         onClick={() => {
                           wallet.disconnectWallet();
                           setWalletMenuOpen(false);
+                          toast.info('Midnight wallet disconnected.', { title: 'Wallet Disconnected' });
                         }}
                         className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-rose-500/10 text-rose-400 rounded transition-colors cursor-pointer"
                       >
@@ -217,7 +221,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
           ) : (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => wallet.connectWallet(false).catch(() => {})}
+                onClick={async () => {
+                  try {
+                    await wallet.connectWallet(false);
+                    toast.success('Connected to Midnight Lace wallet.', { title: 'Wallet Connected' });
+                  } catch (err) {
+                    toast.error(err, { title: 'Wallet Connection Failed' });
+                  }
+                }}
                 disabled={wallet.isConnecting}
                 className="btn-pill btn-pill-dark py-1.5 px-4 text-xs flex items-center gap-2 cursor-pointer"
                 aria-label="Connect Wallet"
@@ -233,7 +244,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
               </button>
 
               <button
-                onClick={() => wallet.connectWallet('demo')}
+                onClick={async () => {
+                  try {
+                    await wallet.connectWallet('demo');
+                    toast.info('Switched to Demo Simulator mode.', { title: 'Demo Mode' });
+                  } catch (err) {
+                    toast.error(err, { title: 'Simulation Error' });
+                  }
+                }}
                 className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex cursor-pointer"
                 title="Connect simulated reviewer demo wallet"
                 aria-label="Demo Wallet"

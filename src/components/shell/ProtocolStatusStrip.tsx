@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Copy, Check, ExternalLink } from 'lucide-react';
 import { NETWORK_CONFIG } from '../../utils/config';
+import { useToast } from '../../context/ToastContext';
 
 export const ProtocolStatusStrip: React.FC = () => {
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   const address = NETWORK_CONFIG.contractAddress;
   const truncatedAddress = `${address.slice(0, 10)}...${address.slice(-8)}`;
@@ -12,6 +14,7 @@ export const ProtocolStatusStrip: React.FC = () => {
     navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast.info('Contract address copied to clipboard!');
   };
 
   return (

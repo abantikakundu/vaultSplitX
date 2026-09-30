@@ -5,6 +5,7 @@ import { ProtocolStatusStrip } from './ProtocolStatusStrip';
 import { Footer } from './Footer';
 import { MobileDrawer } from './MobileDrawer';
 import { WalletModal } from './WalletModal';
+import { ToastContainer } from '../common/Toast';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -48,6 +49,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {/* 6. Wallet Connection Modal */}
       <WalletModal />
+
+      {/* 7. Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 };
