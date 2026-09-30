@@ -11,12 +11,15 @@
 
 ## Submission Checklist
 
-- [x] **Public GitHub repository with full documentation:** [abantikakundu/vaultSplitX](https://github.com/abantikakundu/vaultSplitX) (see [docs/USAGE.md](docs/USAGE.md))
-- [x] **Live Preprod demo link + contract address:** [https://vaultsplitx.vercel.app](https://vaultsplitx.vercel.app) & [Deployed Preprod Contract (`ff4cc6a1...`)](#contract-address)
+- [x] **Public GitHub repository with updated documentation:** [abantikakundu/vaultSplitX](https://github.com/abantikakundu/vaultSplitX) (see [docs/USAGE.md](docs/USAGE.md))
+- [x] **Live demo link:** [https://vaultsplitx.vercel.app](https://vaultsplitx.vercel.app) & [Deployed Preprod Contract (`0xff4cc6...`)](#contract-address)
+- [x] **List of 50 Preprod user wallet addresses (verifiable on-chain):** [USERS.md](USERS.md) (50 verified testnet users with 80+ Preprod transactions on Subscan)
+- [x] **Feedback documentation or link to feedback document:** [FEEDBACK.md](FEEDBACK.md) (10 community feedback improvements resolved with commit proof)
+- [x] **Demo video showing full MVP functionality:** [Watch Demo Video](https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4) (see [Demo Video](#demo-video))
+- [x] **Minimum 20 meaningful commits:** 32+ meaningful commits tracking Compact smart contracts, test suite, frontend dApp, and CI/CD
+- [x] **Choose a submission period:** Level 5 Submission Period (September 2026)
 - [x] **CI/CD badge or workflow file with passing runs:** [![CI](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/abantikakundu/vaultSplitX/actions/workflows/ci.yml) ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
 - [x] **Link to the product X profile:** [@VaultSplitX](https://x.com/VaultSplitX)
-- [x] **Demo video of the MVP:** [Watch Demo Video](https://res.cloudinary.com/ddp0nf4uv/video/upload/v1789835545/vaultSplitX_l9rz6c.mp4) (see [Demo Video](#demo-video))
-- [x] **Minimum 15 meaningful commits:** 15+ commits tracking Compact smart contracts, test suite, frontend dApp, and CI/CD
 
 ## Live Demo
 
@@ -34,7 +37,7 @@
 
 | Network | Contract Address | Deployment TX / Block | Explorer | Status |
 |:---|:---|:---|:---|:---|
-| **Preprod** | `ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e` | Extrinsic `0xbaddc8...` (Block #2614473) | [**View on 1AM Preprod Explorer ↗**](https://explorer.1am.xyz/contract/ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e?network=preprod) | **LIVE & ACTIVE** |
+| **Preprod** | `0xff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e` | Extrinsic `0xbaddc8...` (Block #2614473) | [**View on Subscan Explorer ↗**](https://midnight-preprod.subscan.io/contract/0xff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e) | **LIVE & ACTIVE (80+ Preprod Transactions)** |
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -45,11 +48,13 @@
 
  [Preprod Deployment - September 2026]
  Network          : Midnight Preprod (Testnet)
- Contract Address : ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e
+ Contract Address : 0xff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e
+ Bech32 Address   : mn_addr_preprod1laxvdgfjz0dfn9m989ratya3au7lp29hed9hj4zhlgud4dsszc0qswq67n
  Extrinsic Hash   : 0xbaddc8360cd37c5383d72c7c4958d150a31d3d5eb951aaeac7d495d4927d9ed7
  Block Included   : #2614473
  Deployed At      : 2026-09-19T06:31:40.027Z
- Explorer URL     : https://explorer.1am.xyz/contract/ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e?network=preprod
+ On-Chain Volume  : 80+ Preprod Transactions
+ Subscan Explorer : https://midnight-preprod.subscan.io/contract/0xff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e
 
  [Constructor Parameters]
  Organizer Key    : ec09fba5287d79904b8fc6e9c697beca57ec057ee4d41e8988da557833d5fc13
