@@ -27,6 +27,7 @@ import { useWallet } from '../context/WalletContext';
 import { ContributorAllocation, generateRandomHex32, hexToBytes, bytesToHex } from '../utils/contract';
 import { pureCircuits } from '../contract/index.js';
 import { InfoTooltip } from '../components/common/InfoTooltip';
+import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
 
 export interface ClaimTemplate {
   id: string;
@@ -119,6 +120,7 @@ export const ClaimPage: React.FC = () => {
     registerAllocation,
     isProving,
     provingStep,
+    provingElapsedSeconds,
     claimResult,
     claimError,
     clearClaimState,
@@ -126,6 +128,11 @@ export const ClaimPage: React.FC = () => {
 
   const targetContractAddress =
     vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
+
+  // Action state managers
+  const claimAction = useProofAction();
+  const registerAction = useProofAction();
+  const [activeRegisterBtn, setActiveRegisterBtn] = useState<'banner' | 'main'>('main');
 
   // Form Fields
   const [recipientSecret, setRecipientSecret] = useState('');
@@ -144,8 +151,8 @@ export const ClaimPage: React.FC = () => {
   const [templateLoadedNotice, setTemplateLoadedNotice] = useState<string | null>(null);
   const [exportedVoucherNotice, setExportedVoucherNotice] = useState(false);
 
-  // On-Chain Registration State for Selected Allocation
-  const [isRegisteringAllocation, setIsRegisteringAllocation] = useState(false);
+  // On-Chain Registration Notice
+  const isRegisteringAllocation = registerAction.isProcessing;
   const [registrationNotice, setRegistrationNotice] = useState<string | null>(null);
 
   // Initialize distId
@@ -302,16 +309,17 @@ export const ClaimPage: React.FC = () => {
   // -------------------------------------------------------------------------
   // 1-Click Register Allocation on Midnight Preprod (1AM Wallet)
   // -------------------------------------------------------------------------
-  const handleRegisterCurrentAllocation = async () => {
+  const handleRegisterCurrentAllocation = async (source: 'banner' | 'main' = 'main') => {
+    if (registerAction.isProcessing || claimAction.isProcessing || isProving) return;
     if (!recipientSecret || !amount || BigInt(amount) <= 0n || !salt) {
       alert('Please provide valid recipient secret, amount, and salt to register.');
       return;
     }
 
-    setIsRegisteringAllocation(true);
+    setActiveRegisterBtn(source);
     clearClaimState();
 
-    try {
+    await registerAction.executeAction(async () => {
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
         const connected = await wallet.connectWallet(false);
@@ -334,11 +342,9 @@ export const ClaimPage: React.FC = () => {
         `Allocation registered on Midnight Preprod! Commitment: 0x${res.commitment.slice(0, 10)}... (Tx: 0x${res.txHash ? res.txHash.slice(0, 10) : ''}...). Ready to claim!`,
       );
       setTimeout(() => setRegistrationNotice(null), 8000);
-    } catch (err: unknown) {
+    }).catch((err: unknown) => {
       alert(err instanceof Error ? err.message : 'Failed to register allocation on-chain.');
-    } finally {
-      setIsRegisteringAllocation(false);
-    }
+    });
   };
 
   const handleParseVoucher = () => {
@@ -410,6 +416,7 @@ export const ClaimPage: React.FC = () => {
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (claimAction.isProcessing || registerAction.isProcessing || isProving) return;
     if (!amount || BigInt(amount) <= 0n) {
       return;
     }
@@ -427,7 +434,7 @@ export const ClaimPage: React.FC = () => {
       return;
     }
 
-    try {
+    await claimAction.executeAction(async () => {
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
         try {
@@ -442,9 +449,9 @@ export const ClaimPage: React.FC = () => {
         }
       }
       await claimPayout(recipientSecret, BigInt(amount), salt, distId, claimSpendSecret, activeApi);
-    } catch {
+    }).catch(() => {
       // Handled in context
-    }
+    });
   };
 
   // Tamper / Cheat Attempt simulation for reviewer
@@ -808,24 +815,36 @@ export const ClaimPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleRegisterCurrentAllocation}
-                disabled={isRegisteringAllocation || isProving}
-                className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 hover:bg-amber-500/15 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isRegisteringAllocation ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin text-amber-400" />
-                    <span>Registering on Midnight...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck size={14} className="text-amber-400" />
-                    <span>Register to Contract (1AM Wallet)</span>
-                  </>
-                )}
-              </button>
+              {activeRegisterBtn === 'banner' && registerAction.isProcessing ? (
+                <ProofActionButton
+                  type="button"
+                  isProcessing={true}
+                  elapsedSeconds={registerAction.elapsedSeconds}
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300"
+                >
+                  <ShieldCheck size={14} className="text-amber-400" />
+                  <span>Register to Contract (1AM Wallet)</span>
+                </ProofActionButton>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleRegisterCurrentAllocation('banner')}
+                  disabled={registerAction.isProcessing || claimAction.isProcessing || isProving}
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 hover:bg-amber-500/15 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {registerAction.isProcessing ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin text-amber-400" />
+                      <span>Registering ({registerAction.elapsedSeconds}s)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={14} className="text-amber-400" />
+                      <span>Register to Contract (1AM Wallet)</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           ))}
 
@@ -925,11 +944,16 @@ export const ClaimPage: React.FC = () => {
           </div>
 
           {/* Proving Step Progress Panel */}
-          {isProving && (
+          {(isProving || claimAction.isProcessing || registerAction.isProcessing) && (
             <div className="p-5 rounded bg-sky-500/10 border border-sky-500/30 space-y-3">
-              <div className="flex items-center gap-3">
-                <Loader2 size={18} className="animate-spin text-sky-400" />
-                <span className="text-sm font-bold text-text">{provingStep}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Loader2 size={18} className="animate-spin text-sky-400" />
+                  <span className="text-sm font-bold text-text">{provingStep || 'Executing Zero-Knowledge Prover...'}</span>
+                </div>
+                <span className="font-mono text-sky-400 text-xs font-semibold">
+                  ({claimAction.elapsedSeconds || registerAction.elapsedSeconds || provingElapsedSeconds}s)
+                </span>
               </div>
               <div className="w-full h-2 bg-border rounded-full overflow-hidden">
                 <div className="bg-sky-400 h-full rounded-full animate-pulse w-3/4" />
@@ -1093,42 +1117,37 @@ export const ClaimPage: React.FC = () => {
           <div className="space-y-2 pt-3">
             <div className="flex flex-col sm:flex-row gap-3">
               {isCurrentOnChain ? (
-                <button
+                <ProofActionButton
                   type="submit"
-                  disabled={isProving || isRegisteringAllocation}
+                  isProcessing={claimAction.isProcessing || (isProving && !registerAction.isProcessing)}
+                  elapsedSeconds={claimAction.elapsedSeconds || provingElapsedSeconds}
+                  disabled={registerAction.isProcessing}
                   className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
-                  {isProving ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={16} />
-                      <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
-                    </>
-                  )}
-                </button>
-              ) : (
+                  <ShieldCheck size={16} />
+                  <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
+                </ProofActionButton>
+              ) : activeRegisterBtn === 'banner' && registerAction.isProcessing ? (
                 <button
                   type="button"
-                  onClick={handleRegisterCurrentAllocation}
-                  disabled={isProving || isRegisteringAllocation}
+                  disabled={true}
+                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-not-allowed bg-amber-500 text-ink border border-amber-600"
+                >
+                  <Loader2 size={16} className="animate-spin text-ink" />
+                  <span>Registering Allocation ({registerAction.elapsedSeconds}s)...</span>
+                </button>
+              ) : (
+                <ProofActionButton
+                  type="button"
+                  onClick={() => handleRegisterCurrentAllocation('main')}
+                  isProcessing={registerAction.isProcessing}
+                  elapsedSeconds={registerAction.elapsedSeconds}
+                  disabled={claimAction.isProcessing || isProving}
                   className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm"
                 >
-                  {isRegisteringAllocation ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin text-ink" />
-                      <span>Registering Allocation on Midnight Preprod...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={16} />
-                      <span>Register Allocation on Contract First (1AM Wallet)</span>
-                    </>
-                  )}
-                </button>
+                  <ShieldCheck size={16} />
+                  <span>Register Allocation on Contract First (1AM Wallet)</span>
+                </ProofActionButton>
               )}
 
               {/* Cheat Simulator Button for Reviewer */}

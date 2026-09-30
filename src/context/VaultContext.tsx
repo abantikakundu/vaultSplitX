@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   createDemoVaultState,
   DistributionVaultState,
@@ -56,6 +56,7 @@ interface VaultContextValue {
   resetOrganizerSecret: (customSecret?: string) => void;
   isProving: boolean;
   provingStep: string;
+  provingElapsedSeconds: number;
   claimResult: ClaimVerificationResult | null;
   claimError: string | null;
   clearClaimState: () => void;
@@ -93,8 +94,26 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Proving & Submission State
   const [isProving, setIsProving] = useState(false);
   const [provingStep, setProvingStep] = useState('');
+  const [provingElapsedSeconds, setProvingElapsedSeconds] = useState(0);
+  const isProvingRef = useRef(false);
   const [claimResult, setClaimResult] = useState<ClaimVerificationResult | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
+
+  // Synchronize elapsed seconds timer whenever isProving is active
+  useEffect(() => {
+    if (!isProving) {
+      setProvingElapsedSeconds(0);
+      return;
+    }
+
+    setProvingElapsedSeconds(0);
+    const start = Date.now();
+    const interval = setInterval(() => {
+      setProvingElapsedSeconds(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isProving]);
 
   // Last transaction on Midnight Explorer
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
@@ -203,10 +222,12 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     overrideApi?: ConnectedAPI | null,
     customSalt?: string,
   ): Promise<{ txHash?: string; commitment: string }> => {
+    if (isProvingRef.current) throw new Error('A zero-knowledge proof or transaction is already in progress.');
     if (!vaultState) throw new Error('Vault state is not loaded');
     if (vaultState.isClosed) throw new Error('Cannot register allocations to a closed distribution');
     if (amount <= 0n) throw new Error('Allocation amount must be greater than zero');
 
+    isProvingRef.current = true;
     setIsProving(true);
     setClaimError(null);
 
@@ -295,6 +316,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return { txHash, commitment: commHex };
     } finally {
+      isProvingRef.current = false;
       setIsProving(false);
       setProvingStep('');
     }
@@ -311,10 +333,12 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     claimSpendSecret?: string,
     overrideApi?: ConnectedAPI | null,
   ): Promise<ClaimVerificationResult> => {
+    if (isProvingRef.current) throw new Error('A zero-knowledge proof or transaction is already in progress.');
     if (!vaultState) throw new Error('Vault state not initialized');
     if (vaultState.isClosed) throw new Error('Distribution is closed');
     if (amount <= 0n) throw new Error('Allocated amount must be greater than zero.');
 
+    isProvingRef.current = true;
     setIsProving(true);
     setClaimError(null);
     setClaimResult(null);
@@ -425,6 +449,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setClaimError(msg);
       throw err;
     } finally {
+      isProvingRef.current = false;
       setIsProving(false);
       setProvingStep('');
     }
@@ -434,7 +459,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Close Distribution (Organizer Only)
   // -------------------------------------------------------------------------
   const closeDistribution = async (overrideApi?: ConnectedAPI | null): Promise<{ txHash?: string }> => {
+    if (isProvingRef.current) throw new Error('A zero-knowledge proof or transaction is already in progress.');
     if (!vaultState) throw new Error('Vault state not initialized');
+    isProvingRef.current = true;
     setIsProving(true);
     try {
       let txHash: string | undefined;
@@ -471,6 +498,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setVaultState((prev) => (prev ? { ...prev, isClosed: true } : prev));
       return { txHash };
     } finally {
+      isProvingRef.current = false;
       setIsProving(false);
       setProvingStep('');
     }
@@ -485,6 +513,8 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     allocationsList: Array<{ role: string; amount: bigint; seed?: string }>,
     overrideApi?: ConnectedAPI | null,
   ): Promise<{ contractAddress?: string; txHash?: string }> => {
+    if (isProvingRef.current) throw new Error('A zero-knowledge proof or transaction is already in progress.');
+    isProvingRef.current = true;
     setIsProving(true);
     try {
       const netConfig = getNetworkConfig(wallet.network || 'preprod');
@@ -600,6 +630,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return { contractAddress: targetContract, txHash };
     } finally {
+      isProvingRef.current = false;
       setIsProving(false);
       setProvingStep('');
     }
@@ -636,6 +667,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         resetOrganizerSecret,
         isProving,
         provingStep,
+        provingElapsedSeconds,
         claimResult,
         claimError,
         clearClaimState,

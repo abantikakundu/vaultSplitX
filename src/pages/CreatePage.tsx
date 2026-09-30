@@ -21,6 +21,7 @@ import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
 import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
+import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
 
 interface RecipientRow {
   id: string;
@@ -33,7 +34,14 @@ interface RecipientRow {
 
 export const CreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { createDistributionBatch, vaultState, isProving, provingStep, resetOrganizerSecret } = useVault();
+  const {
+    createDistributionBatch,
+    vaultState,
+    isProving,
+    provingStep,
+    provingElapsedSeconds,
+    resetOrganizerSecret,
+  } = useVault();
   const wallet = useWallet();
   const targetContractAddress =
     vaultState?.contractAddress || 'ff4cc6a13213da9997653947d593b1ef3df0a8b7cb4b795457fa38dab610161e';
@@ -75,7 +83,7 @@ export const CreatePage: React.FC = () => {
   ]);
 
   // Submit and Progress State
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isProcessing: isSubmitting, elapsedSeconds, executeAction } = useProofAction();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdResult, setCreatedResult] = useState<{ contractAddress?: string; txHash?: string } | null>(null);
@@ -145,15 +153,15 @@ export const CreatePage: React.FC = () => {
   // Submit Handler
   const handleSubmitDistribution = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting || isProving) return;
     if (!isAllocationBalanced) {
       setSubmitError('The total allocated amount must equal the total vault funds.');
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
-    try {
+    await executeAction(async () => {
       // 1. Ensure real 1AM wallet is connected. Prompt 1AM wallet if disconnected or in demo mode!
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
@@ -166,7 +174,6 @@ export const CreatePage: React.FC = () => {
         } catch (connErr) {
           const cMsg = (connErr as Error)?.message || '1AM Wallet connection failed or was rejected.';
           setSubmitError(cMsg);
-          setIsSubmitting(false);
           return;
         }
       }
@@ -195,11 +202,9 @@ export const CreatePage: React.FC = () => {
       const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload, activeApi);
       setCreatedResult(res);
       setSubmitSuccess(true);
-    } catch (err: unknown) {
+    }).catch((err: unknown) => {
       setSubmitError(err instanceof Error ? err.message : 'Failed to register distribution batch');
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   return (
@@ -665,12 +670,17 @@ export const CreatePage: React.FC = () => {
               </section>
 
               {/* Proving Status */}
-              {isProving && (
+              {(isProving || isSubmitting) && (
                 <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex items-center gap-3 text-xs sm:text-sm">
                   <Loader2 size={18} className="animate-spin text-sky-400 shrink-0" />
                   <div className="space-y-0.5">
-                    <span className="font-bold text-text">Midnight On-Chain Execution</span>
-                    <p className="text-muted text-xs">{provingStep}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-text">Midnight On-Chain Execution</span>
+                      <span className="font-mono text-sky-400 text-xs font-semibold">
+                        ({elapsedSeconds || provingElapsedSeconds}s)
+                      </span>
+                    </div>
+                    <p className="text-muted text-xs">{provingStep || 'Processing on Midnight network...'}</p>
                   </div>
                 </div>
               )}
@@ -804,23 +814,16 @@ export const CreatePage: React.FC = () => {
               {/* Submit CTA */}
               {!submitSuccess && (
                 <div className="pt-2 space-y-2">
-                  <button
+                  <ProofActionButton
                     type="submit"
-                    disabled={isSubmitting || !isAllocationBalanced}
+                    isProcessing={isSubmitting || isProving}
+                    elapsedSeconds={elapsedSeconds || provingElapsedSeconds}
+                    disabled={!isAllocationBalanced}
                     className="btn-pill btn-pill-sky py-3.5 px-8 text-sm font-bold w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>{provingStep || 'Prompting 1AM Wallet...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={16} />
-                        <span>Deploy & Register to Contract (1AM Wallet)</span>
-                      </>
-                    )}
-                  </button>
+                    <ShieldCheck size={16} />
+                    <span>Deploy & Register to Contract (1AM Wallet)</span>
+                  </ProofActionButton>
                   <p className="text-[11px] text-muted">
                     Prompts 1AM wallet to execute <code className="text-sky-400 font-mono">registerAllocation</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>.
                   </p>

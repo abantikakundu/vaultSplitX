@@ -20,6 +20,7 @@ import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
 import { getExplorerContractUrl, getExplorerTxUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
+import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
 
 export const VaultPage: React.FC = () => {
   const {
@@ -32,21 +33,26 @@ export const VaultPage: React.FC = () => {
     resetOrganizerSecret,
     isProving,
     provingStep,
+    provingElapsedSeconds,
     lastTxHash,
     lastTxExplorerUrl,
   } = useVault();
   const wallet = useWallet();
+
+  // Action state managers
+  const addAllocAction = useProofAction();
+  const closeAction = useProofAction();
 
   // New allocation modal/form state
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRole, setNewRole] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newSeed, setNewSeed] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
+  const isAdding = addAllocAction.isProcessing;
   const [addError, setAddError] = useState<string | null>(null);
 
   // Close distribution confirmation
-  const [isClosing, setIsClosing] = useState(false);
+  const isClosing = closeAction.isProcessing;
   const [copiedCommitment, setCopiedCommitment] = useState<string | null>(null);
 
   const handleCopy = (text: string) => {
@@ -57,15 +63,15 @@ export const VaultPage: React.FC = () => {
 
   const handleAddNewAllocation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (addAllocAction.isProcessing || isProving) return;
     if (!newAmount || BigInt(newAmount) <= 0n) {
       setAddError('Amount must be greater than zero.');
       return;
     }
 
-    setIsAdding(true);
     setAddError(null);
 
-    try {
+    await addAllocAction.executeAction(async () => {
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
         const connected = await wallet.connectWallet(false);
@@ -76,30 +82,27 @@ export const VaultPage: React.FC = () => {
       setNewAmount('');
       setNewSeed('');
       setShowAddModal(false);
-    } catch (err: unknown) {
+    }).catch((err: unknown) => {
       setAddError(err instanceof Error ? err.message : 'Failed to register allocation.');
-    } finally {
-      setIsAdding(false);
-    }
+    });
   };
 
   const handleClose = async () => {
+    if (closeAction.isProcessing || isProving) return;
     if (!window.confirm('Are you sure you want to permanently close this distribution batch? No further claims will be accepted.')) {
       return;
     }
-    setIsClosing(true);
-    try {
+
+    await closeAction.executeAction(async () => {
       let activeApi = wallet.connectedApi;
       if (!activeApi || wallet.isSimulated) {
         const connected = await wallet.connectWallet(false);
         activeApi = connected?.connectedApi ?? null;
       }
       await closeDistribution(activeApi);
-    } catch (err: unknown) {
+    }).catch((err: unknown) => {
       alert(err instanceof Error ? err.message : 'Failed to close distribution.');
-    } finally {
-      setIsClosing(false);
-    }
+    });
   };
 
   if (isLoadingVault) {
@@ -186,14 +189,17 @@ export const VaultPage: React.FC = () => {
                   <span>Register Allocation</span>
                 </button>
 
-                <button
+                <ProofActionButton
+                  type="button"
                   onClick={handleClose}
-                  disabled={isClosing || isProving}
+                  isProcessing={closeAction.isProcessing}
+                  elapsedSeconds={closeAction.elapsedSeconds}
+                  disabled={isProving || addAllocAction.isProcessing}
                   className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 text-rose-400 hover:border-rose-400"
                 >
                   <Lock size={14} />
-                  <span>{isClosing ? 'Closing...' : 'Close Distribution'}</span>
-                </button>
+                  <span>Close Distribution</span>
+                </ProofActionButton>
               </>
             )}
 
@@ -210,12 +216,17 @@ export const VaultPage: React.FC = () => {
 
       {/* Proving & Live Transaction Banners */}
       <div className="max-w-7xl mx-auto px-6 space-y-4">
-        {isProving && (
+        {(isProving || addAllocAction.isProcessing || closeAction.isProcessing) && (
           <div className="p-4 rounded bg-sky-500/10 border border-sky-500/30 flex items-center gap-3 text-xs sm:text-sm">
             <Loader2 size={18} className="animate-spin text-sky-400 shrink-0" />
             <div className="space-y-0.5">
-              <span className="font-bold text-text">Midnight On-Chain Transaction in Progress</span>
-              <p className="text-muted text-xs">{provingStep}</p>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-text">Midnight On-Chain Transaction in Progress</span>
+                <span className="font-mono text-sky-400 text-xs font-semibold">
+                  ({addAllocAction.elapsedSeconds || closeAction.elapsedSeconds || provingElapsedSeconds}s)
+                </span>
+              </div>
+              <p className="text-muted text-xs">{provingStep || 'Processing on Midnight network...'}</p>
             </div>
           </div>
         )}
@@ -536,23 +547,17 @@ export const VaultPage: React.FC = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <ProofActionButton
                   type="submit"
-                  disabled={isAdding}
+                  isProcessing={addAllocAction.isProcessing || isProving}
+                  elapsedSeconds={addAllocAction.elapsedSeconds || provingElapsedSeconds}
                   className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold flex items-center gap-1.5"
                 >
-                  {isAdding ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Registering Commitment...</span>
-                    </>
-                  ) : (
-                    <span className="inline-flex items-center gap-1">
-                      <span>Register Commitment</span>
-                      <InfoTooltip term="commitment" />
-                    </span>
-                  )}
-                </button>
+                  <span className="inline-flex items-center gap-1">
+                    <span>Register Commitment</span>
+                    <InfoTooltip term="commitment" />
+                  </span>
+                </ProofActionButton>
               </div>
             </form>
           </div>
