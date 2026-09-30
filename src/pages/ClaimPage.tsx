@@ -155,6 +155,19 @@ export const ClaimPage: React.FC = () => {
   const [templateLoadedNotice, setTemplateLoadedNotice] = useState<string | null>(null);
   const [exportedVoucherNotice, setExportedVoucherNotice] = useState(false);
 
+  // Import Claim File State
+  const claimFileInputRef = React.useRef<HTMLInputElement>(null);
+  const [importedClaimsList, setImportedClaimsList] = useState<Array<{
+    role: string;
+    amount: string;
+    recipientSecret: string;
+    salt: string;
+    commitment?: string;
+    distributionId?: string;
+  }> | null>(null);
+  const [showImportSelectorModal, setShowImportSelectorModal] = useState(false);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+
   // On-Chain Registration Notice
   const isRegisteringAllocation = registerAction.isProcessing;
   const [registrationNotice, setRegistrationNotice] = useState<string | null>(null);
@@ -425,6 +438,130 @@ export const ClaimPage: React.FC = () => {
     }).catch((err: unknown) => {
       toast.error(err, { title: 'Registration Failed' });
     });
+  };
+
+  const applySingleClaim = (claim: {
+    role?: string;
+    amount: string;
+    recipientSecret: string;
+    salt: string;
+    distributionId?: string;
+    commitment?: string;
+  }) => {
+    clearClaimState();
+    setRecipientSecret(claim.recipientSecret);
+    setAmount(claim.amount);
+    setSalt(claim.salt);
+    if (claim.distributionId) {
+      setDistId(claim.distributionId);
+    } else if (vaultState?.distributionId) {
+      setDistId(vaultState.distributionId);
+    }
+    setClaimSpendSecret(generateRandomHex32());
+    setSelectedAllocId(null);
+    setShowTemplateModal(false);
+    setShowImportSelectorModal(false);
+    const label = claim.role
+      ? `${claim.role} (${Number(claim.amount).toLocaleString()} tDUST)`
+      : `${Number(claim.amount).toLocaleString()} tDUST`;
+    setTemplateLoadedNotice(`Claim file imported: ${label}`);
+    setTimeout(() => setTemplateLoadedNotice(null), 5000);
+    toast.success(`Claim file loaded: ${label}`, {
+      title: 'Claim File Imported',
+    });
+  };
+
+  const handleImportClaimFile = async (file: File) => {
+    try {
+      setVoucherError(null);
+      if (!file) return;
+      const text = await file.text();
+      if (!text.trim()) {
+        throw new Error('The selected claim file is empty.');
+      }
+      let parsed: any;
+      try {
+        parsed = JSON.parse(text.trim());
+      } catch {
+        throw new Error('Selected file is not valid JSON. Please provide a valid JSON claim file.');
+      }
+
+      // Check if it's an array or has a claims/allocations list
+      let candidateClaims: any[] = [];
+      if (Array.isArray(parsed)) {
+        candidateClaims = parsed;
+      } else if (Array.isArray(parsed.claims)) {
+        candidateClaims = parsed.claims;
+      } else if (Array.isArray(parsed.allocations)) {
+        candidateClaims = parsed.allocations;
+      } else if (Array.isArray(parsed.recipients)) {
+        candidateClaims = parsed.recipients;
+      } else {
+        candidateClaims = [parsed];
+      }
+
+      const normalizedClaims = candidateClaims
+        .map((c: any, idx: number) => {
+          const recSec = c.recipientSecret || c.seed || c.secret || '';
+          const amt = c.amount ? c.amount.toString() : '';
+          const s = c.salt || '';
+          const d =
+            c.distributionId ||
+            c.distId ||
+            parsed.distributionId ||
+            parsed.distId ||
+            vaultState?.distributionId ||
+            '';
+          const r = c.role || c.title || `Recipient #${idx + 1}`;
+          const comm = c.commitment || '';
+          return {
+            role: r,
+            amount: amt,
+            recipientSecret: recSec,
+            salt: s,
+            distributionId: d,
+            commitment: comm,
+          };
+        })
+        .filter((c: any) => c.recipientSecret && c.amount && c.salt);
+
+      if (normalizedClaims.length === 0) {
+        throw new Error(
+          'No valid claim credentials found in file. Expected fields: recipientSecret, amount, and salt.',
+        );
+      }
+
+      setImportFileName(file.name);
+
+      if (normalizedClaims.length === 1) {
+        applySingleClaim(normalizedClaims[0]);
+      } else {
+        // Multi-recipient file: open selector modal to let the recipient choose their allocation
+        setImportedClaimsList(normalizedClaims);
+        setShowImportSelectorModal(true);
+        toast.info(
+          `Claim file contains ${normalizedClaims.length} recipient allocations. Select your role to populate.`,
+          {
+            title: 'Multiple Claims Found',
+          },
+        );
+      }
+    } catch (err: unknown) {
+      const msg = formatHumanReadableError(err, 'Claim file import');
+      setVoucherError(msg);
+      toast.error(msg, { title: 'Import Failed' });
+    } finally {
+      if (claimFileInputRef.current) {
+        claimFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImportClaimFile(file);
+    }
   };
 
   const handleParseVoucher = () => {
@@ -703,6 +840,16 @@ export const ClaimPage: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
+                onClick={() => claimFileInputRef.current?.click()}
+                className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer shadow-sm hover:brightness-110 transition-all"
+                title="Import a claim file (JSON) to populate credentials directly"
+              >
+                <Upload size={13} />
+                <span>Import claim file</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   setTemplateTab('custom');
                   setShowTemplateModal(true);
@@ -710,7 +857,7 @@ export const ClaimPage: React.FC = () => {
                 className="btn-pill btn-pill-outline text-xs py-1.5 px-3 flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 cursor-pointer"
                 title="Prompt or paste a custom JSON claim voucher"
               >
-                <Upload size={13} />
+                <Code2 size={13} />
                 <span>Prompt / Paste Voucher</span>
               </button>
 
@@ -946,6 +1093,22 @@ export const ClaimPage: React.FC = () => {
 
         {/* Claim Form */}
         <form onSubmit={handleClaim} className="sharp-card p-7 sm:p-8 space-y-6">
+          {/* Quick Import Bar */}
+          <div className="p-3.5 bg-surface border border-dashed border-border hover:border-emerald-400/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors">
+            <div className="flex items-center gap-2 text-muted">
+              <Upload size={16} className="text-emerald-400 shrink-0" />
+              <span>Have a saved claim file? Upload your JSON file to populate credentials automatically.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => claimFileInputRef.current?.click()}
+              className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto font-semibold"
+            >
+              <Upload size={12} />
+              <span>Import claim file</span>
+            </button>
+          </div>
+
           {/* Recipient Identity Secret */}
           <div>
             <label className="editorial-label flex items-center justify-between">
@@ -1380,7 +1543,7 @@ export const ClaimPage: React.FC = () => {
                     : 'text-muted hover:text-text'
                 }`}
               >
-                Paste JSON Voucher
+                Import File / Paste Voucher
               </button>
             </div>
 
@@ -1440,6 +1603,27 @@ export const ClaimPage: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Upload Claim File Box */}
+                <div className="p-4 rounded-lg border border-dashed border-border bg-surface text-center space-y-2">
+                  <Upload size={22} className="mx-auto text-emerald-400" />
+                  <div className="text-xs font-bold text-text">Upload Claim File (JSON)</div>
+                  <p className="text-[11px] text-muted">
+                    Import a JSON claim file exported from the distribution creation modal or copied from your organizer.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => claimFileInputRef.current?.click()}
+                    className="btn-pill btn-pill-sky text-xs py-1.5 px-4 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Upload size={13} />
+                    <span>Upload JSON File</span>
+                  </button>
+                </div>
+
+                <div className="text-[10px] font-bold text-muted uppercase text-center tracking-wider py-0.5">
+                  — or paste voucher JSON directly —
+                </div>
+
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text">
                     Paste Voucher JSON or Template Object:
@@ -1455,7 +1639,7 @@ export const ClaimPage: React.FC = () => {
                 </div>
 
                 <textarea
-                  rows={8}
+                  rows={7}
                   value={pastedVoucherText}
                   onChange={(e) => setPastedVoucherText(e.target.value)}
                   placeholder={`{\n  "recipientSecret": "0101010101010101010101010101010101010101010101010101010101010101",\n  "amount": "40000",\n  "salt": "1111111111111111111111111111111111111111111111111111111111111111",\n  "distributionId": "a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a"\n}`}
@@ -1491,6 +1675,100 @@ export const ClaimPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Input for Import Claim File */}
+      <input
+        ref={claimFileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        aria-label="Import claim file"
+        onChange={handleFileInputChange}
+      />
+
+      {/* Multi-Claim Selection Modal (when batch JSON file is imported) */}
+      {showImportSelectorModal && importedClaimsList && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-selector-modal-title"
+        >
+          <div className="bg-bg-elev border border-border rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <Sparkles size={20} className="text-emerald-400" />
+                <div>
+                  <h3 id="import-selector-modal-title" className="font-display text-lg font-bold text-text">
+                    Select Recipient Claim from File
+                  </h3>
+                  <p className="text-xs text-muted">
+                    Found {importedClaimsList.length} recipient allocations in {importFileName || 'imported claim file'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportSelectorModal(false);
+                  setImportedClaimsList(null);
+                }}
+                className="p-1 rounded text-muted hover:text-text cursor-pointer"
+                aria-label="Close selector modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted">
+              Choose the allocation that belongs to your identity to load private witnesses and claim parameters into the settlement circuit:
+            </p>
+
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+              {importedClaimsList.map((claim, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-lg bg-surface border border-border hover:border-emerald-400/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-text text-sm">{claim.role}</span>
+                      <span className="font-mono text-xs font-bold text-sky-400 px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
+                        {Number(claim.amount).toLocaleString()} tDUST
+                      </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-muted">
+                      Witness: {claim.recipientSecret.slice(0, 10)}... | Salt: 0x{claim.salt.slice(0, 8)}...
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => applySingleClaim(claim)}
+                    className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 font-bold cursor-pointer shrink-0 flex items-center gap-1"
+                  >
+                    <span>Select & Load</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportSelectorModal(false);
+                  setImportedClaimsList(null);
+                }}
+                className="btn-pill btn-pill-outline text-xs py-1.5 px-4 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

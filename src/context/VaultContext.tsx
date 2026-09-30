@@ -43,7 +43,12 @@ interface VaultContextValue {
     totalFunds: bigint,
     allocationsList: Array<{ role: string; amount: bigint; seed?: string }>,
     overrideApi?: ConnectedAPI | null,
-  ) => Promise<{ contractAddress?: string; txHash?: string }>;
+  ) => Promise<{
+    contractAddress?: string;
+    txHash?: string;
+    distributionId?: string;
+    allocations?: ContributorAllocation[];
+  }>;
   claimPayout: (
     recipientSecret: string,
     amount: bigint,
@@ -512,7 +517,12 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     totalFunds: bigint,
     allocationsList: Array<{ role: string; amount: bigint; seed?: string }>,
     overrideApi?: ConnectedAPI | null,
-  ): Promise<{ contractAddress?: string; txHash?: string }> => {
+  ): Promise<{
+    contractAddress?: string;
+    txHash?: string;
+    distributionId?: string;
+    allocations?: ContributorAllocation[];
+  }> => {
     if (isProvingRef.current) throw new Error('A zero-knowledge proof or transaction is already in progress.');
     isProvingRef.current = true;
     setIsProving(true);
@@ -628,7 +638,12 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return updated;
       });
 
-      return { contractAddress: targetContract, txHash };
+      return {
+        contractAddress: targetContract,
+        txHash,
+        distributionId: distIdHex,
+        allocations: newAllocations,
+      };
     } finally {
       isProvingRef.current = false;
       setIsProving(false);

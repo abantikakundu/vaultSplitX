@@ -11,18 +11,22 @@ import {
   Percent,
   Users,
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   EyeOff,
   ExternalLink,
   RefreshCw,
   Info,
   Copy,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { useWallet } from '../context/WalletContext';
 import { useToast } from '../context/ToastContext';
 import { formatHumanReadableError } from '../utils/formatError';
 import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
+import { ContributorAllocation } from '../utils/contract';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
 import { FieldError } from '../components/common/FieldError';
@@ -91,7 +95,16 @@ export const CreatePage: React.FC = () => {
   const { isProcessing: isSubmitting, elapsedSeconds, executeAction } = useProofAction();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [createdResult, setCreatedResult] = useState<{ contractAddress?: string; txHash?: string } | null>(null);
+  const [createdResult, setCreatedResult] = useState<{
+    contractAddress?: string;
+    txHash?: string;
+    distributionId?: string;
+    allocations?: ContributorAllocation[];
+  } | null>(null);
+  const [createdAllocations, setCreatedAllocations] = useState<ContributorAllocation[]>([]);
+  const [showClaimDetailsModal, setShowClaimDetailsModal] = useState(false);
+  const [savedSecurelyChecked, setSavedSecurelyChecked] = useState(false);
+  const [copiedRecipientId, setCopiedRecipientId] = useState<string | null>(null);
 
   // Calculations
   const totalFunds = useMemo(() => {
@@ -351,7 +364,10 @@ export const CreatePage: React.FC = () => {
 
       const res = await createDistributionBatch(distTitle, totalFunds, allocationsPayload, activeApi);
       setCreatedResult(res);
+      setCreatedAllocations(res.allocations || []);
       setSubmitSuccess(true);
+      setSavedSecurelyChecked(false);
+      setShowClaimDetailsModal(true);
       toast.success('Distribution batch registered successfully on Midnight Preprod!', {
         title: 'Distribution Created',
         txHash: res.txHash,
@@ -360,6 +376,83 @@ export const CreatePage: React.FC = () => {
       toast.error(err, { title: 'Distribution Failed' });
       const humanMsg = formatHumanReadableError(err, 'Distribution registration');
       setSubmitError(humanMsg);
+    });
+  };
+
+  const effectiveAllocations = useMemo(() => {
+    if (createdAllocations.length > 0) return createdAllocations;
+    if (createdResult?.allocations && createdResult.allocations.length > 0) return createdResult.allocations;
+    return [];
+  }, [createdAllocations, createdResult?.allocations]);
+
+  const handleDownloadClaimFile = () => {
+    const list = effectiveAllocations;
+    const distId =
+      createdResult?.distributionId ||
+      vaultState?.distributionId ||
+      'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
+    const fileData = {
+      version: '1.0',
+      warning: "These claim details can't be recovered if lost",
+      distributionTitle: distTitle,
+      contractAddress: targetContractAddress,
+      distributionId: distId,
+      network: wallet.network || 'preprod',
+      createdAt: new Date().toISOString(),
+      totalFunds: totalFunds.toString(),
+      claims: list.map((alloc) => ({
+        role: alloc.role,
+        amount: alloc.amount.toString(),
+        recipientSecret: alloc.recipientSecret,
+        salt: alloc.salt,
+        commitment: alloc.commitment ? `0x${alloc.commitment.replace(/^0x/, '')}` : undefined,
+        distributionId: distId,
+        contractAddress: targetContractAddress,
+        instructions: 'Import this claim file on the VaultSplitX Claim page to synthesize a zero-knowledge claim proof.',
+      })),
+    };
+
+    const jsonStr = JSON.stringify(fileData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeTitle =
+      distTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'distribution';
+    link.href = url;
+    link.download = `claim-file-${safeTitle}-${distId.slice(0, 8)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success('Claim file downloaded successfully! Keep this file in a secure location.', {
+      title: 'Claim File Saved',
+    });
+  };
+
+  const handleCopyRecipientClaim = (alloc: ContributorAllocation) => {
+    const distId =
+      createdResult?.distributionId ||
+      vaultState?.distributionId ||
+      'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
+    const recipientVoucher = {
+      role: alloc.role,
+      amount: alloc.amount.toString(),
+      recipientSecret: alloc.recipientSecret,
+      salt: alloc.salt,
+      commitment: alloc.commitment ? `0x${alloc.commitment.replace(/^0x/, '')}` : undefined,
+      distributionId: distId,
+      contractAddress: targetContractAddress,
+      network: wallet.network || 'preprod',
+      warning: "These claim details can't be recovered if lost. Keep your recipient secret and salt private.",
+      instructions: 'Import this claim file or copy these details into the VaultSplitX Claim page to claim your funds.',
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(recipientVoucher, null, 2));
+    setCopiedRecipientId(alloc.id);
+    setTimeout(() => setCopiedRecipientId(null), 2500);
+    toast.info(`Claim details for ${alloc.role} copied to clipboard!`, {
+      title: 'Claim Details Copied',
     });
   };
 
@@ -1023,9 +1116,29 @@ export const CreatePage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="pt-2">
-                    <Link to="/vault" className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5">
-                      <span>View in Vault Dashboard</span>
+                  <div className="pt-2 flex items-center flex-wrap gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowClaimDetailsModal(true)}
+                      className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer text-sky-400 border-sky-500/40 hover:bg-sky-500/10 font-semibold"
+                    >
+                      <FileText size={14} />
+                      <span>Review Claim Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadClaimFile}
+                      className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer font-bold shadow-sm"
+                    >
+                      <Download size={14} />
+                      <span>Download claim file (JSON)</span>
+                    </button>
+                    <Link to="/vault" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-text border-border hover:bg-surface">
+                      <span>Vault Dashboard</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                    <Link to="/claim" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+                      <span>Go to Claim Page</span>
                       <ArrowRight size={14} />
                     </Link>
                   </div>
@@ -1166,6 +1279,198 @@ export const CreatePage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* 4. CLAIM DETAILS MODAL */}
+      {showClaimDetailsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="claim-details-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              if (!savedSecurelyChecked) {
+                toast.info("Please check \"I've saved these securely\" before closing.", {
+                  title: 'Confirmation Required',
+                });
+              } else {
+                setShowClaimDetailsModal(false);
+              }
+            }
+          }}
+        >
+          <div
+            className="bg-bg-elev border border-border rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-7 space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <div className="text-[10px] uppercase font-mono font-bold text-sky-400 tracking-wider mb-1">
+                  Private Distribution Credentials
+                </div>
+                <h2 id="claim-details-modal-title" className="font-display text-xl sm:text-2xl font-extrabold text-text">
+                  Confidential Claim Details
+                </h2>
+              </div>
+              <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shrink-0">
+                <Check size={13} />
+                <span>Registered On-Chain</span>
+              </div>
+            </div>
+
+            {/* Warning Box */}
+            <div className="p-4 rounded-lg bg-amber-500/10 border-2 border-amber-500/40 text-amber-300 space-y-2">
+              <div className="flex items-center gap-2.5 font-bold text-base text-amber-200">
+                <AlertTriangle size={20} className="text-amber-400 shrink-0" />
+                <span>These claim details can't be recovered if lost</span>
+              </div>
+              <p className="text-xs text-amber-300/90 leading-relaxed pl-7">
+                VaultSplitX allocations use zero-knowledge cryptography on Midnight. Individual recipient secrets, private seeds, and cryptographic blinding salts exist only on your client and are <strong>never stored on the blockchain</strong>. If these details are lost, recipients will not be able to claim their funds.
+              </p>
+            </div>
+
+            {/* Download Claim File (JSON) Strip */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-surface border border-border rounded-lg">
+              <div className="space-y-0.5">
+                <span className="font-bold text-text text-xs block">Export All Recipient Claims (JSON)</span>
+                <span className="text-[11px] text-muted block">
+                  Download a single master file containing credentials for all recipients. Recipients can upload this file on the Claim page.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadClaimFile}
+                className="btn-pill btn-pill-sky text-xs py-2 px-4 font-bold flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-sm hover:brightness-110 transition-all"
+              >
+                <Download size={14} />
+                <span>Download claim file (JSON)</span>
+              </button>
+            </div>
+
+            {/* Recipient Credentials List with Copy button per recipient */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted">
+                <span>Recipients & Private Credentials ({effectiveAllocations.length})</span>
+                <span className="text-[11px] font-mono text-muted/80">Copy individual claim details per recipient</span>
+              </div>
+
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {effectiveAllocations.map((alloc, idx) => (
+                  <div
+                    key={alloc.id || idx}
+                    className="p-3.5 rounded-lg bg-surface border border-border hover:border-sky-500/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-text text-sm truncate">{alloc.role}</span>
+                        <span className="font-mono text-xs font-bold text-sky-400 px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
+                          {Number(alloc.amount).toLocaleString()} tDUST
+                        </span>
+                      </div>
+                      <div className="font-mono text-[11px] text-muted space-y-0.5">
+                        <div className="truncate">
+                          <span className="text-muted/70">Secret Witness: </span>
+                          <span className="text-text">{alloc.recipientSecret.slice(0, 16)}...{alloc.recipientSecret.slice(-8)}</span>
+                        </div>
+                        <div className="truncate">
+                          <span className="text-muted/70">Blinding Salt: </span>
+                          <span>0x{alloc.salt.slice(0, 12)}...</span>
+                        </div>
+                        {alloc.commitment && (
+                          <div className="truncate">
+                            <span className="text-muted/70">Commitment: </span>
+                            <span className="text-emerald-400">0x{alloc.commitment.slice(0, 12)}...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyRecipientClaim(alloc)}
+                        className={`btn-pill text-xs py-1.5 px-3 flex items-center gap-1.5 font-semibold transition-all cursor-pointer ${
+                          copiedRecipientId === alloc.id
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'btn-pill-outline text-muted hover:text-text'
+                        }`}
+                        title={`Copy claim credentials for ${alloc.role}`}
+                      >
+                        {copiedRecipientId === alloc.id ? (
+                          <>
+                            <Check size={12} className="text-emerald-400" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={12} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Checkbox "I've saved these securely" & Modal Footer */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <label className="flex items-start sm:items-center gap-3 p-3.5 rounded-lg border border-border bg-surface cursor-pointer select-none hover:bg-surface-hover transition-colors">
+                <input
+                  type="checkbox"
+                  id="saved-securely-checkbox"
+                  checked={savedSecurelyChecked}
+                  onChange={(e) => setSavedSecurelyChecked(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 sm:mt-0 rounded border-border text-sky-500 focus:ring-sky-400 cursor-pointer shrink-0"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-xs sm:text-sm font-bold text-text block">
+                    I've saved these securely
+                  </span>
+                  <span className="text-[11px] text-muted block">
+                    I have saved or downloaded these claim details and understand they cannot be recovered if lost.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p className="text-[11px] text-muted">
+                  {!savedSecurelyChecked ? (
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <AlertCircle size={12} className="shrink-0" />
+                      <span>Check the confirmation checkbox above to enable closing.</span>
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <Check size={12} className="shrink-0" />
+                      <span>Claim details securely acknowledged. You may now close this modal.</span>
+                    </span>
+                  )}
+                </p>
+
+                <button
+                  type="button"
+                  disabled={!savedSecurelyChecked}
+                  onClick={() => {
+                    if (!savedSecurelyChecked) return;
+                    setShowClaimDetailsModal(false);
+                  }}
+                  className={`btn-pill py-2.5 px-6 text-xs font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${
+                    savedSecurelyChecked
+                      ? 'btn-pill-sky cursor-pointer shadow-sm'
+                      : 'opacity-50 cursor-not-allowed bg-surface border border-border text-muted'
+                  }`}
+                >
+                  <span>Close Modal</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
