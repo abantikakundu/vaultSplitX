@@ -113,7 +113,7 @@ export const ProofActionButton: React.FC<ProofActionButtonProps> = ({
       disabled={disabled || isProcessing}
       onClick={handleClick}
       aria-busy={isProcessing}
-      className={`${className} ${
+      className={`min-h-[44px] ${className} ${
         isProcessing ? '!whitespace-normal text-center cursor-not-allowed opacity-90' : ''
       }`}
     >

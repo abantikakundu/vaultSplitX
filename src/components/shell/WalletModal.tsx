@@ -98,10 +98,10 @@ export const WalletModal: React.FC = () => {
 
           <button
             onClick={wallet.closeWalletModal}
-            className="p-1.5 rounded-md hover:bg-surface-hover text-muted hover:text-text transition-colors cursor-pointer"
+            className="p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md hover:bg-surface-hover text-muted hover:text-text transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -137,17 +137,17 @@ export const WalletModal: React.FC = () => {
                   </div>
                   <button
                     onClick={handleCopyAddress}
-                    className="btn-pill btn-pill-outline py-1.5 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer hover:border-sky-400"
-                    aria-label="Copy address"
+                    className="btn-pill btn-pill-outline min-h-[44px] py-1.5 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer hover:border-sky-400"
+                    aria-label="Copy wallet address"
                   >
                     {copied ? (
                       <>
-                        <Check size={13} className="text-emerald-400" />
+                        <Check size={13} className="text-emerald-400" aria-hidden="true" />
                         <span className="text-emerald-400 font-semibold">Copied!</span>
                       </>
                     ) : (
                       <>
-                        <Copy size={13} />
+                        <Copy size={13} aria-hidden="true" />
                         <span>Copy</span>
                       </>
                     )}
@@ -172,17 +172,17 @@ export const WalletModal: React.FC = () => {
                     wallet.disconnectWallet();
                     toast.info('Midnight wallet disconnected.', { title: 'Wallet Disconnected' });
                   }}
-                  className="btn-pill py-2 px-4 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-2 flex-1 cursor-pointer transition-colors"
+                  className="btn-pill min-h-[44px] py-2 px-4 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-2 flex-1 cursor-pointer transition-colors"
                   aria-label="Disconnect wallet"
                 >
-                  <LogOut size={14} />
+                  <LogOut size={14} aria-hidden="true" />
                   <span>Disconnect</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={wallet.closeWalletModal}
-                  className="btn-pill btn-pill-outline py-2 px-4 text-xs font-semibold cursor-pointer"
+                  className="btn-pill btn-pill-outline min-h-[44px] py-2 px-4 text-xs font-semibold cursor-pointer"
                 >
                   Close
                 </button>
@@ -225,16 +225,17 @@ export const WalletModal: React.FC = () => {
                         }
                       }}
                       disabled={wallet.isConnecting}
-                      className="btn-pill btn-pill-rose text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold cursor-pointer transition-all"
+                      className="btn-pill btn-pill-rose min-h-[44px] text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold cursor-pointer transition-all"
                     >
-                      <RefreshCw size={13} className={wallet.isConnecting ? 'animate-spin' : ''} />
+                      <RefreshCw size={13} className={wallet.isConnecting ? 'animate-spin' : ''} aria-hidden="true" />
                       <span>{wallet.isConnecting ? 'Connecting...' : 'Try again'}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => wallet.clearError()}
-                      className="text-xs text-muted hover:text-text px-2 py-1 cursor-pointer"
+                      className="text-xs text-muted hover:text-text px-3 py-2 min-h-[44px] inline-flex items-center cursor-pointer"
+                      aria-label="Dismiss error message"
                     >
                       Dismiss
                     </button>
@@ -251,7 +252,7 @@ export const WalletModal: React.FC = () => {
               {!isLaceDetected ? (
                 <div className="p-5 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-4 text-center">
                   <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 mx-auto flex items-center justify-center text-amber-400">
-                    <AlertCircle size={24} />
+                    <AlertCircle size={24} aria-hidden="true" />
                   </div>
 
                   <div className="space-y-1.5">
@@ -265,7 +266,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* Required note: "Switch Lace to the Preprod network" */}
                   <div className="p-3 rounded-md bg-sky-500/10 border border-sky-500/30 text-xs text-sky-200 flex items-center justify-center gap-2 text-center">
-                    <Info size={14} className="text-sky-400 shrink-0" />
+                    <Info size={14} className="text-sky-400 shrink-0" aria-hidden="true" />
                     <span>Switch Lace to the Preprod network</span>
                   </div>
 
@@ -274,10 +275,11 @@ export const WalletModal: React.FC = () => {
                       href={LACE_INSTALL_URL}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-pill btn-pill-sky text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold no-underline w-full sm:w-auto justify-center"
+                      className="btn-pill btn-pill-sky min-h-[44px] text-xs py-2 px-4 inline-flex items-center gap-1.5 font-bold no-underline w-full sm:w-auto justify-center"
+                      aria-label="Install Midnight Lace (opens in new tab)"
                     >
                       <span>Install Midnight Lace</span>
-                      <ExternalLink size={13} />
+                      <ExternalLink size={13} aria-hidden="true" />
                     </a>
 
                     <button
@@ -291,9 +293,10 @@ export const WalletModal: React.FC = () => {
                         }
                       }}
                       disabled={wallet.isConnecting}
-                      className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
+                      className="btn-pill btn-pill-outline min-h-[44px] text-xs py-2 px-3 inline-flex items-center gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
+                      aria-label="Refresh wallet detection"
                     >
-                      <RefreshCw size={12} className={wallet.isConnecting ? 'animate-spin' : ''} />
+                      <RefreshCw size={12} className={wallet.isConnecting ? 'animate-spin' : ''} aria-hidden="true" />
                       <span>{wallet.isConnecting ? 'Detecting...' : 'Refresh Detection'}</span>
                     </button>
                   </div>
@@ -323,7 +326,7 @@ export const WalletModal: React.FC = () => {
                         }
                       }}
                       disabled={wallet.isConnecting}
-                      className="w-full p-4 rounded-md border border-border bg-surface-hover hover:border-sky-400 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer group"
+                      className="w-full min-h-[44px] p-4 rounded-md border border-border bg-surface-hover hover:border-sky-400 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer group"
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
@@ -338,7 +341,7 @@ export const WalletModal: React.FC = () => {
                           v{w.apiVersion} • Midnight DApp Standard
                         </span>
                       </div>
-                      <div className="btn-pill btn-pill-sky text-xs py-1.5 px-3 shrink-0 flex items-center gap-1 group-hover:scale-105 transition-transform">
+                      <div className="btn-pill btn-pill-sky min-h-[44px] text-xs py-1.5 px-3 shrink-0 flex items-center gap-1 group-hover:scale-105 transition-transform">
                         <span>{wallet.isConnecting ? 'Connecting...' : 'Connect'}</span>
                         <ArrowRight size={13} />
                       </div>
@@ -347,7 +350,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* Required note: "Switch Lace to the Preprod network" */}
                   <div className="p-3 rounded-md bg-sky-500/10 border border-sky-500/30 text-xs text-sky-200 flex items-center gap-2">
-                    <Info size={14} className="text-sky-400 shrink-0" />
+                    <Info size={14} className="text-sky-400 shrink-0" aria-hidden="true" />
                     <span>Switch Lace to the Preprod network</span>
                   </div>
                 </div>
@@ -366,7 +369,8 @@ export const WalletModal: React.FC = () => {
                       toast.error(err, { title: 'Simulation Error' });
                     }
                   }}
-                  className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-sky-400 hover:underline min-h-[44px] inline-flex items-center cursor-pointer"
+                  aria-label="Use simulated reviewer demo wallet"
                 >
                   Use Demo Simulator
                 </button>

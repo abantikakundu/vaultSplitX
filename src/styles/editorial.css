@@ -30,13 +30,16 @@ body {
   max-width: 100vw;
 }
 
-/* Accessibility: Skip Link & Focus Outline */
+/* Accessibility: Skip Link & Visible Focus Outlines */
 .skip-to-content {
   position: absolute;
   top: -100px;
   left: 1rem;
   z-index: 9999;
   padding: 0.5rem 1rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   background: var(--sky-400);
   color: var(--text-on-sky);
   font-weight: 700;
@@ -49,8 +52,20 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--sky-400);
-  outline-offset: 3px;
+  outline: 2px solid var(--border-focus, #38BDF8) !important;
+  outline-offset: 3px !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--border-focus, #38BDF8) !important;
+  outline-offset: 2px !important;
 }
 
 /* Typography Helpers */
@@ -172,11 +187,14 @@ body {
 .theme-toggle-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   border: none;
   background: transparent;
   color: var(--muted);
-  padding: 0.3rem 0.65rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 44px;
+  min-width: 44px;
   border-radius: var(--radius-pill);
   font-size: 0.75rem;
   font-weight: 600;
@@ -240,13 +258,23 @@ body {
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
-/* 5. Buttons & Chips */
+/* 5. Buttons & Chips — WCAG 2.5.5 / 2.5.8 (min 44px height touch targets) */
+button,
+[role="button"],
+.btn-pill,
+.btn-hero-solid,
+.btn-hero-outline {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
 .btn-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
+  min-height: 44px;
   border-radius: var(--radius-pill);
   font-size: 0.875rem;
   font-weight: 700;
@@ -307,8 +335,10 @@ body {
   border-radius: var(--radius-pill);
   font-weight: 700;
   padding: 0.65rem 1.35rem;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   text-decoration: none;
   font-size: 0.875rem;
@@ -327,8 +357,10 @@ body {
   border-radius: var(--radius-pill);
   font-weight: 700;
   padding: 0.65rem 1.35rem;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   text-decoration: none;
   font-size: 0.875rem;
@@ -553,6 +585,8 @@ body {
   background: transparent;
   border: none;
   padding: 0.6rem 1rem;
+  min-height: 44px;
+  box-sizing: border-box;
   font-size: 0.8125rem;
   font-weight: 700;
   color: var(--muted);
@@ -569,8 +603,15 @@ body {
   box-shadow: var(--hard-shadow-sm);
 }
 
+::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
 .editorial-input {
   width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
   background-color: var(--surface);
   border: 1.5px solid var(--border);
   color: var(--text);
@@ -581,9 +622,11 @@ body {
   transition: border-color var(--duration-base);
 }
 
-.editorial-input:focus {
-  border-color: var(--sky-400);
-  outline: none;
+.editorial-input:focus,
+.editorial-input:focus-visible {
+  border-color: var(--border-focus, #38BDF8) !important;
+  outline: 2px solid var(--border-focus, #38BDF8) !important;
+  outline-offset: 1px !important;
 }
 
 .editorial-input-mono {
@@ -695,5 +738,68 @@ body {
   .cluster-card-4 { transform: rotate(1deg) !important; }
   .navbar-inner {
     padding: 0.75rem 1rem;
+  }
+}
+
+/* Mobile & 360px Small Screen Hardening (No horizontal scroll, full accessibility) */
+@media (max-width: 480px) {
+  html, body, #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .hero-color-block {
+    padding: 2.25rem 1rem !important;
+    min-height: auto;
+  }
+
+  .hero-headline {
+    font-size: clamp(1.75rem, 7vw, 2.25rem) !important;
+    line-height: 1.15 !important;
+    word-break: break-word;
+  }
+
+  .hero-desc {
+    font-size: 0.9375rem !important;
+  }
+
+  .hero-cards-cluster {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+  }
+
+  .navbar-inner {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .status-strip-inner {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .announcement-bar {
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.7rem !important;
+    word-break: break-word;
+  }
+
+  .btn-hero-solid,
+  .btn-hero-outline {
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  .sharp-card {
+    padding: 1.25rem !important;
+  }
+
+  .table-responsive-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    width: 100%;
   }
 }

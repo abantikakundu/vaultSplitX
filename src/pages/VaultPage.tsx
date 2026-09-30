@@ -260,10 +260,11 @@ export const VaultPage: React.FC = () => {
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
+              className="btn-pill btn-pill-outline min-h-[44px] text-xs py-2 px-3 flex items-center justify-center gap-1.5 cursor-pointer"
               title="Refresh live state from Midnight indexer"
+              aria-label="Sync indexer state"
             >
-              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} />
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} aria-hidden="true" />
               <span>{isSyncing ? 'Syncing...' : 'Sync Indexer'}</span>
             </button>
 
@@ -271,9 +272,10 @@ export const VaultPage: React.FC = () => {
               <>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5 cursor-pointer"
+                  className="btn-pill btn-pill-sky min-h-[44px] text-xs py-2 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
+                  aria-label="Register new allocation"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} aria-hidden="true" />
                   <span>Register Allocation</span>
                 </button>
 
@@ -283,9 +285,10 @@ export const VaultPage: React.FC = () => {
                   isProcessing={closeAction.isProcessing}
                   elapsedSeconds={closeAction.elapsedSeconds}
                   disabled={isProving || addAllocAction.isProcessing}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 text-rose-400 hover:border-rose-400 cursor-pointer"
+                  className="btn-pill btn-pill-outline min-h-[44px] text-xs py-2 px-4 flex items-center justify-center gap-1.5 text-rose-400 hover:border-rose-400 cursor-pointer"
+                  aria-label="Close distribution batch"
                 >
-                  <Lock size={14} />
+                  <Lock size={14} aria-hidden="true" />
                   <span>Close Distribution</span>
                 </ProofActionButton>
               </>
@@ -293,10 +296,11 @@ export const VaultPage: React.FC = () => {
 
             <Link
               to="/claim"
-              className="btn-pill btn-pill-dark text-xs py-2 px-4 flex items-center gap-1.5"
+              className="btn-pill btn-pill-dark min-h-[44px] text-xs py-2 px-4 flex items-center justify-center gap-1.5"
+              aria-label="Go to test claim portal"
             >
               <span>Test Claim Portal</span>
-              <ArrowRight size={14} />
+              <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -336,10 +340,11 @@ export const VaultPage: React.FC = () => {
                     navigator.clipboard.writeText(`0x${lastTxHash.replace(/^0x/, '')}`);
                     toast.info('Transaction hash copied to clipboard!');
                   }}
-                  className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                  className="p-1 px-2.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1.5 text-xs min-h-[44px]"
                   title="Copy transaction hash"
+                  aria-label="Copy broadcast transaction hash"
                 >
-                  <Copy size={12} />
+                  <Copy size={13} aria-hidden="true" />
                   <span>Copy</span>
                 </button>
               </div>
@@ -349,10 +354,11 @@ export const VaultPage: React.FC = () => {
                 href={lastTxExplorerUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold min-h-[44px]"
+                aria-label="View transaction on Midnight explorer"
               >
                 <span>View on explorer</span>
-                <ExternalLink size={13} />
+                <ExternalLink size={13} aria-hidden="true" />
               </a>
             )}
           </div>
@@ -483,7 +489,7 @@ export const VaultPage: React.FC = () => {
                   toast.error(err, { title: 'Wallet Connection Failed' });
                 }
               }}
-              className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 cursor-pointer"
+              className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 cursor-pointer min-h-[44px]"
             >
               Connect Midnight Lace
             </button>
@@ -499,7 +505,7 @@ export const VaultPage: React.FC = () => {
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400">
+                  <div className="w-9 h-9 rounded bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400" aria-hidden="true">
                     <ShieldCheck size={18} />
                   </div>
                   <div>
@@ -526,11 +532,12 @@ export const VaultPage: React.FC = () => {
                           href={getExplorerTxUrl(alloc.txHash, wallet.network || 'preprod')}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:underline px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20"
+                          className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:underline px-2.5 py-1 rounded bg-sky-500/10 border border-sky-500/20 min-h-[44px]"
                           title="View on explorer"
+                          aria-label={`View transaction for ${alloc.role} on Midnight explorer`}
                         >
                           <span>tx: {alloc.txHash.slice(0, 8)}...</span>
-                          <ExternalLink size={10} />
+                          <ExternalLink size={11} aria-hidden="true" />
                         </a>
                         <button
                           type="button"
@@ -538,25 +545,27 @@ export const VaultPage: React.FC = () => {
                             navigator.clipboard.writeText(`0x${alloc.txHash!.replace(/^0x/, '')}`);
                             toast.info('Transaction hash copied to clipboard!');
                           }}
-                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors"
+                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                           title="Copy transaction hash"
+                          aria-label={`Copy transaction hash for ${alloc.role}`}
                         >
-                          <Copy size={11} />
+                          <Copy size={13} aria-hidden="true" />
                         </button>
                       </div>
                     )}
                     {alloc.claimed ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                        <Check size={13} />
+                      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 min-h-[44px]">
+                        <Check size={13} aria-hidden="true" />
                         <span>Claimed</span>
                       </span>
                     ) : (
                       <Link
                         to={`/claim?role=${encodeURIComponent(alloc.role)}`}
-                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 flex items-center gap-1"
+                        className="btn-pill btn-pill-sky text-xs py-2 px-3.5 flex items-center gap-1 min-h-[44px]"
+                        aria-label={`Claim share for ${alloc.role}`}
                       >
                         <span>Claim Share</span>
-                        <ArrowRight size={13} />
+                        <ArrowRight size={13} aria-hidden="true" />
                       </Link>
                     )}
                   </div>
@@ -572,14 +581,16 @@ export const VaultPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-text break-all text-[11px]">{alloc.commitment}</span>
                   <button
+                    type="button"
                     onClick={() => handleCopy(alloc.commitment)}
-                    className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer"
+                    className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                     title="Copy commitment hash"
+                    aria-label={`Copy commitment hash for ${alloc.role}`}
                   >
                     {copiedCommitment === alloc.commitment ? (
-                      <Check size={12} className="text-emerald-400" />
+                      <Check size={14} className="text-emerald-400" aria-hidden="true" />
                     ) : (
-                      <Copy size={12} />
+                      <Copy size={14} aria-hidden="true" />
                     )}
                   </button>
                 </div>
@@ -595,15 +606,18 @@ export const VaultPage: React.FC = () => {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
+          aria-labelledby="modal-add-alloc-title"
         >
           <div className="bg-surface border border-border rounded max-w-lg w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="font-display text-xl font-bold text-text">
+              <h3 id="modal-add-alloc-title" className="font-display text-xl font-bold text-text">
                 Register New Allocation
               </h3>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-muted hover:text-text text-sm cursor-pointer"
+                className="text-muted hover:text-text text-sm cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                aria-label="Close register allocation modal"
               >
                 Cancel
               </button>
@@ -611,8 +625,9 @@ export const VaultPage: React.FC = () => {
 
             <form onSubmit={handleAddNewAllocation} className="space-y-4">
               <div>
-                <label className="editorial-label">Contributor Role or Description</label>
+                <label htmlFor="modal-alloc-role" className="editorial-label">Contributor Role or Description</label>
                 <input
+                  id="modal-alloc-role"
                   type="text"
                   required
                   value={newRole}
@@ -625,7 +640,7 @@ export const VaultPage: React.FC = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                  <label className="editorial-label inline-flex items-center gap-1 mb-0">
+                  <label htmlFor="modal-alloc-amount" className="editorial-label inline-flex items-center gap-1 mb-0">
                     <span>Payment Amount (tDUST)</span>
                     <InfoTooltip term="tDUST" />
                   </label>
@@ -640,6 +655,7 @@ export const VaultPage: React.FC = () => {
                   </span>
                 </div>
                 <input
+                  id="modal-alloc-amount"
                   type="number"
                   min="1"
                   required
@@ -654,11 +670,12 @@ export const VaultPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="editorial-label inline-flex items-center gap-1">
+                <label htmlFor="modal-alloc-seed" className="editorial-label inline-flex items-center gap-1">
                   <span>Secret Passphrase / Salt Seed</span>
                   <InfoTooltip term="salt" />
                 </label>
                 <input
+                  id="modal-alloc-seed"
                   type="text"
                   value={newSeed}
                   onChange={(e) => setNewSeed(e.target.value)}
@@ -693,7 +710,8 @@ export const VaultPage: React.FC = () => {
                           title: 'Credentials Reset',
                         });
                       }}
-                      className="btn-pill btn-pill-sky text-xs py-1 px-3 font-semibold cursor-pointer"
+                      className="btn-pill btn-pill-sky text-xs py-2 px-3 font-semibold cursor-pointer min-h-[44px]"
+                      aria-label="Reset organizer credentials to contract default"
                     >
                       Reset Organizer Credentials to Contract Default
                     </button>
@@ -701,11 +719,12 @@ export const VaultPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-2 flex items-center justify-end gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer min-h-[44px]"
+                  aria-label="Cancel registration"
                 >
                   Cancel
                 </button>
@@ -714,7 +733,7 @@ export const VaultPage: React.FC = () => {
                   isProcessing={addAllocAction.isProcessing || isProving}
                   elapsedSeconds={addAllocAction.elapsedSeconds || provingElapsedSeconds}
                   disabled={!isModalValid || addAllocAction.isProcessing || isProving}
-                  className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
                 >
                   <span className="inline-flex items-center gap-1">
                     <span>Register Commitment</span>

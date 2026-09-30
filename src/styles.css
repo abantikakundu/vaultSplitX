@@ -23,8 +23,27 @@
 .text-sky-500 { color: var(--sky-500); }
 .text-white { color: #FFFFFF; }
 .text-emerald-400 { color: #34D399; }
-.text-rose-400 { color: #F87171; }
 .text-pink-400 { color: #F472D0; }
+.text-amber-400 { color: #FBBF24; }
+
+/* Light Theme Contrast Enhancements (WCAG AA >= 4.5:1 on white / light backgrounds) */
+[data-theme='light'] .text-sky-400,
+[data-theme='light'] .text-sky-300 {
+  color: #0369A1;
+}
+[data-theme='light'] .text-emerald-400 {
+  color: #047857;
+}
+[data-theme='light'] .text-rose-400,
+[data-theme='light'] .text-rose-500 {
+  color: #BE123C;
+}
+[data-theme='light'] .text-pink-400 {
+  color: #9D174D;
+}
+[data-theme='light'] .text-amber-400 {
+  color: #B45309;
+}
 
 .border-border { border-color: var(--border); }
 .border-sky-400 { border-color: var(--sky-400); }

@@ -544,19 +544,21 @@ export const CreatePage: React.FC = () => {
                 });
               }}
               title="Reset organizer credentials to contract defaults"
-              className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 text-muted hover:text-text cursor-pointer"
+              aria-label="Reset organizer credentials to contract defaults"
+              className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 text-muted hover:text-text cursor-pointer min-h-[44px]"
             >
-              <RefreshCw size={11} />
+              <RefreshCw size={12} aria-hidden="true" />
               <span>Reset Credentials</span>
             </button>
             <a
               href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
               target="_blank"
               rel="noreferrer"
-              className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-semibold no-underline"
+              className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-semibold no-underline min-h-[44px]"
+              aria-label="View contract on Midnight explorer"
             >
               <span>View on 1AM Explorer</span>
-              <ExternalLink size={12} />
+              <ExternalLink size={12} aria-hidden="true" />
             </a>
           </div>
         </div>
@@ -712,11 +714,12 @@ export const CreatePage: React.FC = () => {
                         key={preset.value}
                         type="button"
                         onClick={() => setTotalFundsStr(preset.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-mono font-medium border transition-colors cursor-pointer ${
+                        className={`px-3 py-2 rounded-full text-xs font-mono font-medium border transition-colors cursor-pointer min-h-[44px] inline-flex items-center justify-center ${
                           totalFundsStr === preset.value
                             ? 'bg-sky-400/20 text-sky-400 border-sky-400'
                             : 'bg-surface border-border text-muted hover:text-text'
                         }`}
+                        aria-label={`Set total funds to ${preset.label} tDUST`}
                       >
                         {preset.label}
                       </button>
@@ -741,43 +744,49 @@ export const CreatePage: React.FC = () => {
                   </div>
 
                   {/* Rule Type Selector */}
-                  <div className="flex items-center gap-1.5 p-1 bg-surface-hover border border-border rounded-full">
+                  <div className="flex items-center gap-1.5 p-1 bg-surface-hover border border-border rounded-full flex-wrap" role="radiogroup" aria-label="Allocation rule type">
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={ruleType === 'fixed'}
                       onClick={() => setRuleType('fixed')}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      className={`px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px] ${
                         ruleType === 'fixed'
                           ? 'bg-sky-400 text-ink shadow-sm'
                           : 'text-muted hover:text-text'
                       }`}
                     >
-                      <Coins size={13} />
+                      <Coins size={14} aria-hidden="true" />
                       <span>Fixed Shares</span>
                     </button>
 
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={ruleType === 'percentage'}
                       onClick={() => setRuleType('percentage')}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      className={`px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px] ${
                         ruleType === 'percentage'
                           ? 'bg-sky-400 text-ink shadow-sm'
                           : 'text-muted hover:text-text'
                       }`}
                     >
-                      <Percent size={13} />
+                      <Percent size={14} aria-hidden="true" />
                       <span>Percentage</span>
                     </button>
 
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={ruleType === 'contribution'}
                       onClick={() => setRuleType('contribution')}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      className={`px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px] ${
                         ruleType === 'contribution'
                           ? 'bg-sky-400 text-ink shadow-sm'
                           : 'text-muted hover:text-text'
                       }`}
                     >
-                      <Users size={13} />
+                      <Users size={14} aria-hidden="true" />
                       <span>Weights</span>
                     </button>
                   </div>
@@ -836,10 +845,11 @@ export const CreatePage: React.FC = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
                         {/* Contributor Label */}
                         <div className="sm:col-span-5">
-                          <label className="text-[10px] font-bold text-muted uppercase block mb-1">
+                          <label htmlFor={`rec-role-${rec.id}`} className="text-[10px] font-bold text-muted uppercase block mb-1">
                             Recipient #{index + 1} Role / Label
                           </label>
                           <input
+                            id={`rec-role-${rec.id}`}
                             type="text"
                             required
                             value={rec.role}
@@ -852,7 +862,7 @@ export const CreatePage: React.FC = () => {
 
                         {/* Amount / Pct / Weight depending on ruleType */}
                         <div className="sm:col-span-4">
-                          <label className="text-[10px] font-bold text-muted uppercase block mb-1">
+                          <label htmlFor={`rec-amount-${rec.id}`} className="text-[10px] font-bold text-muted uppercase block mb-1">
                             {ruleType === 'fixed' ? (
                               <span className="inline-flex items-center gap-1">
                                 <span>Amount (tDUST)</span>
@@ -865,6 +875,7 @@ export const CreatePage: React.FC = () => {
                             )}
                           </label>
                           <input
+                            id={`rec-amount-${rec.id}`}
                             type="number"
                             required
                             min="1"
@@ -896,13 +907,14 @@ export const CreatePage: React.FC = () => {
 
                         {/* Secret Seed */}
                         <div className="sm:col-span-2">
-                          <label className="text-[10px] font-bold text-muted uppercase block mb-1">
+                          <label htmlFor={`rec-seed-${rec.id}`} className="text-[10px] font-bold text-muted uppercase block mb-1">
                             <span className="inline-flex items-center gap-1">
                               <span>Secret Seed / Salt</span>
                               <InfoTooltip term="salt" />
                             </span>
                           </label>
                           <input
+                            id={`rec-seed-${rec.id}`}
                             type="text"
                             value={rec.seed}
                             onChange={(e) => handleUpdateRecipient(rec.id, 'seed', e.target.value)}
@@ -915,15 +927,15 @@ export const CreatePage: React.FC = () => {
                         </div>
 
                         {/* Delete Row */}
-                        <div className="sm:col-span-1 flex justify-end pt-5">
+                        <div className="sm:col-span-1 flex justify-end sm:pt-4">
                           <button
                             type="button"
                             onClick={() => handleRemoveRecipient(rec.id)}
                             disabled={recipients.length <= 1}
-                            className="p-2 rounded text-muted hover:text-rose-400 disabled:opacity-30 cursor-pointer"
-                            aria-label="Remove recipient row"
+                            className="p-2 rounded text-muted hover:text-rose-400 disabled:opacity-30 cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                            aria-label={`Remove recipient ${rec.role || index + 1}`}
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={16} aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -934,9 +946,10 @@ export const CreatePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAddRecipient}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 flex items-center gap-1.5 min-h-[44px]"
+                  aria-label="Add recipient row"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} aria-hidden="true" />
                   <span>Add Recipient Row</span>
                 </button>
               </section>
@@ -976,9 +989,10 @@ export const CreatePage: React.FC = () => {
                           resetOrganizerSecret();
                           setSubmitError(null);
                         }}
-                        className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold cursor-pointer"
+                        className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 font-bold cursor-pointer min-h-[44px]"
+                        aria-label="Reset organizer credentials to contract default and dismiss"
                       >
-                        <RefreshCw size={13} />
+                        <RefreshCw size={13} aria-hidden="true" />
                         <span>Reset Organizer Credentials to Contract Default &amp; Dismiss</span>
                       </button>
                     </div>
@@ -989,7 +1003,7 @@ export const CreatePage: React.FC = () => {
                     submitError.toLowerCase().includes('rejected')) && (
                     <div className="pt-2 space-y-2">
                       <div className="text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 p-2 rounded flex items-center gap-1.5">
-                        <Info size={12} className="text-sky-400 shrink-0" />
+                        <Info size={12} className="text-sky-400 shrink-0" aria-hidden="true" />
                         <span>Switch Lace to the Preprod network</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -997,10 +1011,11 @@ export const CreatePage: React.FC = () => {
                           href="https://www.lace.io"
                           target="_blank"
                           rel="noreferrer"
-                          className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
+                          className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline min-h-[44px]"
+                          aria-label="Install Midnight Lace wallet"
                         >
                           <span>Install Midnight Lace</span>
-                          <ExternalLink size={13} />
+                          <ExternalLink size={13} aria-hidden="true" />
                         </a>
                         <button
                           type="button"
@@ -1012,7 +1027,8 @@ export const CreatePage: React.FC = () => {
                               toast.error(err, { title: 'Wallet Connection Failed' });
                             }
                           }}
-                          className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
+                          className="btn-pill btn-pill-outline text-xs py-2 px-3 cursor-pointer min-h-[44px]"
+                          aria-label="Try connecting wallet again"
                         >
                           Try again
                         </button>
@@ -1026,7 +1042,8 @@ export const CreatePage: React.FC = () => {
                               toast.error(err, { title: 'Simulation Error' });
                             }
                           }}
-                          className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
+                          className="text-xs text-muted hover:text-text underline cursor-pointer ml-1 min-h-[44px] inline-flex items-center"
+                          aria-label="Switch to Demo Simulator"
                         >
                           or switch to Demo Simulator
                         </button>
@@ -1039,7 +1056,7 @@ export const CreatePage: React.FC = () => {
               {submitSuccess && (
                 <div className="p-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm space-y-4">
                   <div className="flex items-center gap-2 font-bold text-base">
-                    <Check size={20} />
+                    <Check size={20} aria-hidden="true" />
                     <span>Allocations Registered on Midnight Preprod Smart Contract!</span>
                   </div>
                   <p className="text-xs text-emerald-300">
@@ -1058,10 +1075,11 @@ export const CreatePage: React.FC = () => {
                               navigator.clipboard.writeText(`0x${targetContractAddress.replace(/^0x/, '')}`);
                               toast.info('Contract address copied to clipboard!');
                             }}
-                            className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                            className="p-1.5 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px] min-h-[44px] min-w-[44px]"
                             title="Copy contract address"
+                            aria-label="Copy smart contract address"
                           >
-                            <Copy size={12} />
+                            <Copy size={13} aria-hidden="true" />
                             <span>Copy</span>
                           </button>
                         </div>
@@ -1073,10 +1091,11 @@ export const CreatePage: React.FC = () => {
                         href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-sky-400"
+                        className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-sky-400 min-h-[44px]"
+                        aria-label="View contract on Midnight explorer"
                       >
                         <span>Contract on Explorer</span>
-                        <ExternalLink size={12} />
+                        <ExternalLink size={12} aria-hidden="true" />
                       </a>
                     </div>
 
@@ -1092,10 +1111,11 @@ export const CreatePage: React.FC = () => {
                                 navigator.clipboard.writeText(`0x${createdResult.txHash!.replace(/^0x/, '')}`);
                                 toast.info('Transaction hash copied to clipboard!');
                               }}
-                              className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                              className="p-1.5 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px] min-h-[44px] min-w-[44px]"
                               title="Copy transaction hash"
+                              aria-label="Copy transaction hash"
                             >
-                              <Copy size={12} />
+                              <Copy size={13} aria-hidden="true" />
                               <span>Copy</span>
                             </button>
                           </div>
@@ -1107,10 +1127,11 @@ export const CreatePage: React.FC = () => {
                           href={getExplorerTxUrl(createdResult.txHash, wallet.network || 'preprod')}
                           target="_blank"
                           rel="noreferrer"
-                          className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                          className="btn-pill btn-pill-sky text-xs py-2 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold min-h-[44px]"
+                          aria-label="View transaction on Midnight explorer"
                         >
                           <span>View on explorer</span>
-                          <ExternalLink size={12} />
+                          <ExternalLink size={12} aria-hidden="true" />
                         </a>
                       </div>
                     )}
@@ -1120,26 +1141,28 @@ export const CreatePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowClaimDetailsModal(true)}
-                      className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer text-sky-400 border-sky-500/40 hover:bg-sky-500/10 font-semibold"
+                      className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer text-sky-400 border-sky-500/40 hover:bg-sky-500/10 font-semibold min-h-[44px]"
+                      aria-label="Review claim details modal"
                     >
-                      <FileText size={14} />
+                      <FileText size={14} aria-hidden="true" />
                       <span>Review Claim Details</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleDownloadClaimFile}
-                      className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer font-bold shadow-sm"
+                      className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer font-bold shadow-sm min-h-[44px]"
+                      aria-label="Download claim file as JSON"
                     >
-                      <Download size={14} />
+                      <Download size={14} aria-hidden="true" />
                       <span>Download claim file (JSON)</span>
                     </button>
-                    <Link to="/vault" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-text border-border hover:bg-surface">
+                    <Link to="/vault" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-text border-border hover:bg-surface min-h-[44px]">
                       <span>Vault Dashboard</span>
-                      <ArrowRight size={14} />
+                      <ArrowRight size={14} aria-hidden="true" />
                     </Link>
-                    <Link to="/claim" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+                    <Link to="/claim" className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 min-h-[44px]">
                       <span>Go to Claim Page</span>
-                      <ArrowRight size={14} />
+                      <ArrowRight size={14} aria-hidden="true" />
                     </Link>
                   </div>
                 </div>
@@ -1341,9 +1364,10 @@ export const CreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDownloadClaimFile}
-                className="btn-pill btn-pill-sky text-xs py-2 px-4 font-bold flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-sm hover:brightness-110 transition-all"
+                className="btn-pill btn-pill-sky text-xs py-2 px-4 font-bold flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-sm hover:brightness-110 transition-all min-h-[44px]"
+                aria-label="Download all recipient claims as JSON"
               >
-                <Download size={14} />
+                <Download size={14} aria-hidden="true" />
                 <span>Download claim file (JSON)</span>
               </button>
             </div>
@@ -1390,21 +1414,22 @@ export const CreatePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleCopyRecipientClaim(alloc)}
-                        className={`btn-pill text-xs py-1.5 px-3 flex items-center gap-1.5 font-semibold transition-all cursor-pointer ${
+                        className={`btn-pill text-xs py-2 px-3.5 flex items-center gap-1.5 font-semibold transition-all cursor-pointer min-h-[44px] min-w-[44px] justify-center ${
                           copiedRecipientId === alloc.id
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                             : 'btn-pill-outline text-muted hover:text-text'
                         }`}
                         title={`Copy claim credentials for ${alloc.role}`}
+                        aria-label={`Copy claim credentials for ${alloc.role}`}
                       >
                         {copiedRecipientId === alloc.id ? (
                           <>
-                            <Check size={12} className="text-emerald-400" />
+                            <Check size={14} className="text-emerald-400" aria-hidden="true" />
                             <span>Copied!</span>
                           </>
                         ) : (
                           <>
-                            <Copy size={12} />
+                            <Copy size={14} aria-hidden="true" />
                             <span>Copy</span>
                           </>
                         )}
@@ -1417,7 +1442,7 @@ export const CreatePage: React.FC = () => {
 
             {/* Checkbox "I've saved these securely" & Modal Footer */}
             <div className="pt-4 border-t border-border space-y-4">
-              <label className="flex items-start sm:items-center gap-3 p-3.5 rounded-lg border border-border bg-surface cursor-pointer select-none hover:bg-surface-hover transition-colors">
+              <label htmlFor="saved-securely-checkbox" className="flex items-start sm:items-center gap-3 p-3.5 rounded-lg border border-border bg-surface cursor-pointer select-none hover:bg-surface-hover transition-colors">
                 <input
                   type="checkbox"
                   id="saved-securely-checkbox"
@@ -1457,14 +1482,15 @@ export const CreatePage: React.FC = () => {
                     if (!savedSecurelyChecked) return;
                     setShowClaimDetailsModal(false);
                   }}
-                  className={`btn-pill py-2.5 px-6 text-xs font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${
+                  className={`btn-pill py-2.5 px-6 text-xs font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] ${
                     savedSecurelyChecked
                       ? 'btn-pill-sky cursor-pointer shadow-sm'
                       : 'opacity-50 cursor-not-allowed bg-surface border border-border text-muted'
                   }`}
+                  aria-label="Close claim details modal"
                 >
                   <span>Close Modal</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={13} aria-hidden="true" />
                 </button>
               </div>
             </div>

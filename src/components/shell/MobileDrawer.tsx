@@ -51,10 +51,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
         </Link>
         <button
           onClick={onClose}
-          className="p-2 rounded hover:bg-surface text-text border border-border"
-          aria-label="Close menu"
+          className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded hover:bg-surface text-text border border-border cursor-pointer"
+          aria-label="Close navigation menu"
         >
-          <X size={20} />
+          <X size={20} aria-hidden="true" />
         </button>
       </div>
 
@@ -118,19 +118,21 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
         <div className="pt-6 border-t border-border space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold text-muted">Theme</span>
-            <div className="theme-segmented-toggle">
+            <div className="theme-segmented-toggle" role="group" aria-label="Theme Switcher">
               <button
                 onClick={() => setTheme('light')}
                 className={`theme-toggle-btn ${theme === 'light' ? 'active' : ''}`}
+                aria-label="Switch to light theme"
               >
-                <Sun size={13} />
+                <Sun size={13} aria-hidden="true" />
                 <span>Light</span>
               </button>
               <button
                 onClick={() => setTheme('midnight')}
                 className={`theme-toggle-btn ${theme === 'midnight' ? 'active' : ''}`}
+                aria-label="Switch to midnight theme"
               >
-                <Moon size={13} />
+                <Moon size={13} aria-hidden="true" />
                 <span>Midnight</span>
               </button>
             </div>
@@ -138,17 +140,18 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
 
           <div className="p-3 bg-surface border border-border rounded flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <span className="live-dot" />
+              <span className="live-dot" aria-hidden="true" />
               <span className="font-semibold text-text">Midnight Preprod</span>
             </div>
             <a
               href={NETWORK_CONFIG.explorerUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 text-sky-400 no-underline"
+              className="min-h-[44px] inline-flex items-center gap-1 text-sky-400 no-underline"
+              aria-label="View on explorer"
             >
               <span>Explorer</span>
-              <ExternalLink size={12} />
+              <ExternalLink size={12} aria-hidden="true" />
             </a>
           </div>
 
@@ -172,17 +175,17 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                 </span>
                 <button
                   onClick={handleCopyAddress}
-                  className="btn-pill btn-pill-outline py-1 px-2.5 text-xs inline-flex items-center gap-1 cursor-pointer"
-                  aria-label="Copy address"
+                  className="btn-pill btn-pill-outline min-h-[44px] py-1 px-3 text-xs inline-flex items-center gap-1 cursor-pointer"
+                  aria-label="Copy wallet address"
                 >
                   {copied ? (
                     <>
-                      <Check size={12} className="text-emerald-400" />
+                      <Check size={12} className="text-emerald-400" aria-hidden="true" />
                       <span className="text-emerald-400 text-[11px]">Copied</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={12} />
+                      <Copy size={12} aria-hidden="true" />
                       <span className="text-[11px]">Copy</span>
                     </>
                   )}
@@ -195,10 +198,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                   toast.info('Midnight wallet disconnected.', { title: 'Wallet Disconnected' });
                   onClose();
                 }}
-                className="w-full btn-pill py-2 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full btn-pill min-h-[44px] py-2 text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 aria-label="Disconnect wallet"
               >
-                <LogOut size={13} />
+                <LogOut size={13} aria-hidden="true" />
                 <span>Disconnect</span>
               </button>
             </div>
@@ -213,9 +216,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                   toast.error(err, { title: 'Wallet Connection Failed' });
                 }
               }}
-              className="btn-pill btn-pill-sky w-full py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
+              className="btn-pill btn-pill-sky min-h-[44px] w-full py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
+              aria-label="Connect Midnight Lace wallet"
             >
-              <Wallet size={16} />
+              <Wallet size={16} aria-hidden="true" />
               <span>Connect Midnight Lace</span>
             </button>
           )}

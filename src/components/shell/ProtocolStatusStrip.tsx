@@ -38,14 +38,14 @@ export const ProtocolStatusStrip: React.FC = () => {
             <span className="text-text font-medium">{truncatedAddress}</span>
             <button
               onClick={handleCopy}
-              className="p-1 rounded hover:bg-surface text-muted hover:text-text transition-colors cursor-pointer border border-transparent hover:border-border"
+              className="p-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded hover:bg-surface text-muted hover:text-text transition-colors cursor-pointer border border-transparent hover:border-border"
               title="Copy full contract address"
               aria-label="Copy contract address"
             >
               {copied ? (
-                <Check size={13} className="text-emerald-400" />
+                <Check size={13} className="text-emerald-400" aria-hidden="true" />
               ) : (
-                <Copy size={13} />
+                <Copy size={13} aria-hidden="true" />
               )}
             </button>
           </div>
@@ -57,10 +57,11 @@ export const ProtocolStatusStrip: React.FC = () => {
             href={NETWORK_CONFIG.explorerUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors font-medium no-underline"
+            className="min-h-[44px] inline-flex items-center gap-1 text-muted hover:text-sky-400 transition-colors font-medium no-underline"
+            aria-label="View contract on explorer"
           >
             <span>Contract</span>
-            <ExternalLink size={12} />
+            <ExternalLink size={12} aria-hidden="true" />
           </a>
 
           <span className="text-muted" aria-hidden="true">•</span>
@@ -69,10 +70,11 @@ export const ProtocolStatusStrip: React.FC = () => {
             href={NETWORK_CONFIG.faucetUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors font-medium no-underline"
+            className="min-h-[44px] inline-flex items-center gap-1 text-muted hover:text-sky-400 transition-colors font-medium no-underline"
+            aria-label="Get test tokens from faucet"
           >
             <span>Test tokens</span>
-            <ExternalLink size={12} />
+            <ExternalLink size={12} aria-hidden="true" />
           </a>
         </div>
       </div>

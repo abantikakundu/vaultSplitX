@@ -75,10 +75,11 @@ export const VerifyPage: React.FC = () => {
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer"
+              className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer min-h-[44px]"
               title="Refresh live parameters from Midnight GraphQL indexer"
+              aria-label="Refresh live parameters from Midnight indexer"
             >
-              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} />
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-sky-400' : ''} aria-hidden="true" />
               <span>{isSyncing ? 'Syncing...' : 'Sync Indexer'}</span>
             </button>
 
@@ -86,10 +87,11 @@ export const VerifyPage: React.FC = () => {
               href={NETWORK_CONFIG.explorerUrl}
               target="_blank"
               rel="noreferrer"
-              className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5 no-underline font-bold"
+              className="btn-pill btn-pill-sky text-xs py-2 px-4 flex items-center gap-1.5 no-underline font-bold min-h-[44px]"
+              aria-label="Explore Preprod smart contract on Midnight explorer"
             >
               <span>Explore Preprod Contract</span>
-              <ExternalLink size={13} />
+              <ExternalLink size={13} aria-hidden="true" />
             </a>
           </div>
         </div>
@@ -123,11 +125,13 @@ export const VerifyPage: React.FC = () => {
                   <td className="py-3.5 px-5 text-text break-all max-w-xs">{organizerKey}</td>
                   <td className="py-3.5 px-5 text-right">
                     <button
+                      type="button"
                       onClick={() => handleCopy(organizerKey, 'organizer', 'Organizer Key')}
-                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
+                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                       title="Copy organizer key"
+                      aria-label="Copy organizer key"
                     >
-                      {copiedKey === 'organizer' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedKey === 'organizer' ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </td>
                 </tr>
@@ -144,11 +148,13 @@ export const VerifyPage: React.FC = () => {
                   <td className="py-3.5 px-5 text-text break-all max-w-xs">{distId}</td>
                   <td className="py-3.5 px-5 text-right">
                     <button
+                      type="button"
                       onClick={() => handleCopy(distId, 'distId', 'Distribution ID')}
-                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
+                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                       title="Copy distribution ID"
+                      aria-label="Copy distribution ID"
                     >
-                      {copiedKey === 'distId' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedKey === 'distId' ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </td>
                 </tr>
@@ -170,10 +176,13 @@ export const VerifyPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-5 text-right">
                     <button
+                      type="button"
                       onClick={() => handleCopy(totalFunds.toString(), 'funds', 'Total Vault Funds')}
-                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border"
+                      className="p-1.5 rounded hover:bg-surface text-muted hover:text-text cursor-pointer border border-border min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                      title="Copy total vault funds"
+                      aria-label="Copy total vault funds"
                     >
-                      {copiedKey === 'funds' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedKey === 'funds' ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </td>
                 </tr>
@@ -322,11 +331,13 @@ export const VerifyPage: React.FC = () => {
                     <span className="truncate">{comm}</span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleCopy(comm, `comm-${idx}`, `Commitment #${idx + 1}`)}
-                    className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0"
+                    className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                     title="Copy commitment"
+                    aria-label={`Copy commitment hash #${idx + 1}`}
                   >
-                    {copiedKey === `comm-${idx}` ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    {copiedKey === `comm-${idx}` ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   </button>
                 </div>
               ))}
@@ -360,15 +371,17 @@ export const VerifyPage: React.FC = () => {
                     className="p-2.5 bg-emerald-500/5 border border-emerald-500/20 rounded flex items-center justify-between font-mono text-[11px] text-emerald-400"
                   >
                     <div className="flex items-center gap-2 truncate mr-2">
-                      <Check size={12} className="shrink-0" />
+                      <Check size={12} className="shrink-0" aria-hidden="true" />
                       <span className="truncate">{nullifier}</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleCopy(nullifier, `null-${idx}`, `Nullifier #${idx + 1}`)}
-                      className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0"
+                      className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                       title="Copy nullifier"
+                      aria-label={`Copy spent nullifier #${idx + 1}`}
                     >
-                      {copiedKey === `null-${idx}` ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedKey === `null-${idx}` ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </div>
                 ))}

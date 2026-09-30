@@ -314,9 +314,9 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 type="button"
                 onClick={handleClose}
                 aria-label="Close tooltip"
-                className="p-1 -mr-1 text-muted hover:text-text rounded transition-colors cursor-pointer"
+                className="p-1 -mr-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-muted hover:text-text rounded transition-colors cursor-pointer"
               >
-                <X size={12} />
+                <X size={14} aria-hidden="true" />
               </button>
             </div>
 

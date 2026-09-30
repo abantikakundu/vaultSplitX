@@ -513,8 +513,8 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 6. CLOSING CTA BLOCK IN SKY-400 */}
-      <section className="max-w-7xl mx-auto px-6">
-        <div className="bg-sky-400 text-ink p-10 sm:p-14 border border-ink shadow-lg flex flex-col md:flex-row items-center justify-between gap-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="bg-sky-400 text-ink p-6 sm:p-10 md:p-14 border border-ink shadow-lg flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-3 max-w-xl">
             <div className="text-xs uppercase tracking-widest font-extrabold text-ink">
               Ready to Distribute?

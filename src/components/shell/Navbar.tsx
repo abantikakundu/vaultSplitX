@@ -100,18 +100,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
               onClick={() => setTheme('light')}
               className={`theme-toggle-btn ${theme === 'light' ? 'active' : ''}`}
               title="Light Theme"
+              aria-label="Switch to light theme"
               aria-pressed={theme === 'light'}
             >
-              <Sun size={13} />
+              <Sun size={13} aria-hidden="true" />
               <span className="hidden lg:inline">Light</span>
             </button>
             <button
               onClick={() => setTheme('midnight')}
               className={`theme-toggle-btn ${theme === 'midnight' ? 'active' : ''}`}
               title="Midnight Theme"
+              aria-label="Switch to midnight theme"
               aria-pressed={theme === 'midnight'}
             >
-              <Moon size={13} />
+              <Moon size={13} aria-hidden="true" />
               <span className="hidden lg:inline">Midnight</span>
             </button>
           </div>
@@ -128,21 +130,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
               <div className="relative flex items-center bg-surface border border-border rounded-full p-1 pl-3 shadow-sm hover:border-sky-400/50 transition-colors">
                 <button
                   onClick={() => setWalletMenuOpen(!walletMenuOpen)}
-                  className="flex items-center gap-1.5 text-xs font-mono font-bold text-text hover:text-sky-400 transition-colors cursor-pointer pr-1"
+                  className="flex items-center gap-1.5 min-h-[44px] text-xs font-mono font-bold text-text hover:text-sky-400 transition-colors cursor-pointer pr-1"
                   aria-expanded={walletMenuOpen}
                   aria-haspopup="true"
                   title="View wallet details"
+                  aria-label="View wallet details"
                 >
                   <span className={`w-2 h-2 rounded-full ${wallet.isSimulated ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
                   <span>{shortenedAddress}</span>
                   {wallet.isSimulated && <span className="text-[10px] text-amber-400 font-sans font-bold">[Sim]</span>}
-                  <ChevronDown size={13} className="text-muted" />
+                  <ChevronDown size={13} className="text-muted" aria-hidden="true" />
                 </button>
 
                 {/* Direct Copy Button */}
                 <button
                   onClick={handleCopyAddress}
-                  className="p-1.5 rounded-full hover:bg-surface-hover text-muted hover:text-text transition-colors cursor-pointer"
+                  className="p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full hover:bg-surface-hover text-muted hover:text-text transition-colors cursor-pointer"
                   title={copied ? 'Copied!' : 'Copy address'}
                   aria-label="Copy address"
                 >
@@ -152,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                 {/* Direct Disconnect Option */}
                 <button
                   onClick={wallet.disconnectWallet}
-                  className="p-1.5 rounded-full hover:bg-rose-500/15 text-muted hover:text-rose-400 transition-colors cursor-pointer ml-0.5"
+                  className="p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full hover:bg-rose-500/15 text-muted hover:text-rose-400 transition-colors cursor-pointer ml-0.5"
                   title="Disconnect"
                   aria-label="Disconnect wallet"
                 >
@@ -219,7 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={async () => {
                   try {
@@ -230,16 +233,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                   }
                 }}
                 disabled={wallet.isConnecting}
-                className="btn-pill btn-pill-dark py-1.5 px-4 text-xs flex items-center gap-2 cursor-pointer"
-                aria-label="Connect Wallet"
+                className="btn-pill btn-pill-dark min-h-[44px] py-1.5 px-3 sm:px-4 text-xs flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer"
+                aria-label="Connect Midnight Lace Wallet"
               >
-                <Wallet size={14} />
-                <span>
+                <Wallet size={14} aria-hidden="true" />
+                <span className="whitespace-nowrap">
                   {wallet.isConnecting
                     ? 'Connecting...'
                     : wallet.hasLaceExtension
-                    ? 'Connect Midnight Lace'
-                    : 'Connect Midnight Lace'}
+                    ? 'Connect Lace'
+                    : 'Connect Lace'}
                 </span>
               </button>
 
@@ -252,9 +255,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
                     toast.error(err, { title: 'Simulation Error' });
                   }
                 }}
-                className="btn-pill btn-pill-outline py-1.5 px-3 text-xs hidden lg:flex cursor-pointer"
+                className="btn-pill btn-pill-outline min-h-[44px] py-1.5 px-3 text-xs hidden lg:flex cursor-pointer"
                 title="Connect simulated reviewer demo wallet"
-                aria-label="Demo Wallet"
+                aria-label="Connect Demo Simulator Wallet"
               >
                 Demo
               </button>
@@ -264,11 +267,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu, mobileMenuOpen
           {/* Mobile Hamburger Button */}
           <button
             onClick={onOpenMobileMenu}
-            className="md:hidden p-2 rounded hover:bg-surface text-text transition-colors cursor-pointer border border-border"
+            className="md:hidden p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded hover:bg-surface text-text transition-colors cursor-pointer border border-border"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>

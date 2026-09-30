@@ -193,12 +193,12 @@ export const ToastCard: React.FC<ToastCardProps> = ({ toast, onDismiss }) => {
                   data-testid="toast-tx-copy-btn"
                   aria-label="Copy transaction hash"
                   title="Copy full transaction hash to clipboard"
-                  className="p-1 rounded hover:bg-surface text-muted hover:text-text cursor-pointer transition-colors shrink-0"
+                  className="p-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded hover:bg-surface text-muted hover:text-text cursor-pointer transition-colors shrink-0"
                 >
                   {copiedTx ? (
-                    <Check size={13} className="text-emerald-400" />
+                    <Check size={13} className="text-emerald-400" aria-hidden="true" />
                   ) : (
-                    <Copy size={13} />
+                    <Copy size={13} aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -210,10 +210,10 @@ export const ToastCard: React.FC<ToastCardProps> = ({ toast, onDismiss }) => {
                   target="_blank"
                   rel="noreferrer"
                   data-testid="toast-explorer-link"
-                  className="text-sky-400 hover:text-sky-300 text-xs inline-flex items-center gap-1 font-sans font-semibold hover:underline"
+                  className="text-sky-400 hover:text-sky-300 text-xs min-h-[44px] inline-flex items-center gap-1 font-sans font-semibold hover:underline"
                 >
                   <span>View on explorer</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </div>
             </div>
@@ -227,10 +227,10 @@ export const ToastCard: React.FC<ToastCardProps> = ({ toast, onDismiss }) => {
                 target="_blank"
                 rel="noreferrer"
                 data-testid="toast-explorer-link"
-                className="text-sky-400 hover:text-sky-300 text-xs inline-flex items-center gap-1 font-sans font-semibold hover:underline"
+                className="text-sky-400 hover:text-sky-300 text-xs min-h-[44px] inline-flex items-center gap-1 font-sans font-semibold hover:underline"
               >
                 <span>View on explorer</span>
-                <ExternalLink size={12} />
+                <ExternalLink size={12} aria-hidden="true" />
               </a>
             </div>
           )}
@@ -242,9 +242,9 @@ export const ToastCard: React.FC<ToastCardProps> = ({ toast, onDismiss }) => {
           onClick={() => onDismiss(toast.id)}
           data-testid="toast-close-btn"
           aria-label="Dismiss notification"
-          className="text-muted hover:text-text p-1 rounded hover:bg-surface transition-colors cursor-pointer shrink-0 -mr-1 -mt-1"
+          className="text-muted hover:text-text p-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded hover:bg-surface transition-colors cursor-pointer shrink-0 -mr-1 -mt-1"
         >
-          <X size={14} />
+          <X size={14} aria-hidden="true" />
         </button>
       </div>
     </div>

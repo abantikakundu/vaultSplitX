@@ -40,24 +40,24 @@ export const Footer: React.FC = () => {
           {/* Product Links */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-wider font-bold text-text">Product</h4>
-            <ul className="space-y-2.5 text-sm list-none p-0">
+            <ul className="space-y-1 text-sm list-none p-0">
               <li>
-                <Link to="/vault" className="text-muted hover:text-sky-400 transition-colors no-underline">
+                <Link to="/vault" className="text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px] inline-flex items-center">
                   Vault Dashboard
                 </Link>
               </li>
               <li>
-                <Link to="/create" className="text-muted hover:text-sky-400 transition-colors no-underline">
+                <Link to="/create" className="text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px] inline-flex items-center">
                   Create Distribution
                 </Link>
               </li>
               <li>
-                <Link to="/claim" className="text-muted hover:text-sky-400 transition-colors no-underline">
+                <Link to="/claim" className="text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px] inline-flex items-center">
                   Private Claim
                 </Link>
               </li>
               <li>
-                <Link to="/verify" className="text-muted hover:text-sky-400 transition-colors no-underline">
+                <Link to="/verify" className="text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px] inline-flex items-center">
                   Public Ledger Audit
                 </Link>
               </li>
@@ -67,16 +67,17 @@ export const Footer: React.FC = () => {
           {/* Resources */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-wider font-bold text-text">Resources</h4>
-            <ul className="space-y-2.5 text-sm list-none p-0">
+            <ul className="space-y-1 text-sm list-none p-0">
               <li>
                 <a
                   href={NETWORK_CONFIG.docsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="Midnight developer documentation"
                 >
                   <span>Documentation</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
               <li>
@@ -84,10 +85,11 @@ export const Footer: React.FC = () => {
                   href={NETWORK_CONFIG.githubUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="VaultSplitX GitHub repository"
                 >
                   <span>GitHub Repository</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
               <li>
@@ -95,10 +97,11 @@ export const Footer: React.FC = () => {
                   href={NETWORK_CONFIG.explorerUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="Midnight Preprod explorer"
                 >
                   <span>Preprod Explorer</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
             </ul>
@@ -107,16 +110,17 @@ export const Footer: React.FC = () => {
           {/* Network */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-wider font-bold text-text">Network</h4>
-            <ul className="space-y-2.5 text-sm list-none p-0">
+            <ul className="space-y-1 text-sm list-none p-0">
               <li>
                 <a
                   href="https://midnight.network"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="Official Midnight network website"
                 >
                   <span>Midnight Network</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
               <li>
@@ -124,10 +128,11 @@ export const Footer: React.FC = () => {
                   href="https://docs.midnight.network"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="Compact language documentation"
                 >
                   <span>Compact Language</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
               <li>
@@ -135,10 +140,11 @@ export const Footer: React.FC = () => {
                   href={NETWORK_CONFIG.faucetUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-muted hover:text-sky-400 transition-colors no-underline"
+                  className="flex items-center gap-1.5 text-muted hover:text-sky-400 transition-colors no-underline min-h-[44px]"
+                  aria-label="Midnight Preprod faucet"
                 >
                   <span>Preprod Faucet</span>
-                  <ExternalLink size={12} />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
               </li>
             </ul>

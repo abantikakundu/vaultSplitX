@@ -15,8 +15,8 @@ export const NotFoundPage: React.FC = () => {
         The route you requested does not exist on VaultSplitX. Please return to the homepage or check the navigation links above.
       </p>
       <div className="pt-2">
-        <Link to="/" className="btn-pill btn-pill-sky text-xs py-2.5 px-5 inline-flex items-center gap-2">
-          <ArrowLeft size={14} />
+        <Link to="/" className="btn-pill btn-pill-sky text-xs py-2.5 px-5 inline-flex items-center gap-2 min-h-[44px]" aria-label="Return to homepage">
+          <ArrowLeft size={14} aria-hidden="true" />
           <span>Return Home</span>
         </Link>
       </div>

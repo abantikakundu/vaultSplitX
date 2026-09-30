@@ -759,10 +759,11 @@ export const ClaimPage: React.FC = () => {
             href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
             target="_blank"
             rel="noreferrer"
-            className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 shrink-0 text-emerald-400 hover:text-emerald-300 font-semibold no-underline"
+            className="btn-pill btn-pill-outline text-xs py-2 px-3.5 inline-flex items-center gap-1.5 shrink-0 text-emerald-400 hover:text-emerald-300 font-semibold no-underline min-h-[44px]"
+            aria-label="View contract on Midnight explorer"
           >
             <span>View on 1AM Explorer</span>
-            <ExternalLink size={12} />
+            <ExternalLink size={12} aria-hidden="true" />
           </a>
         </div>
 
@@ -796,10 +797,10 @@ export const ClaimPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setTemplateLoadedNotice(null)}
-              className="text-emerald-400 hover:text-white cursor-pointer p-0.5"
+              className="text-emerald-400 hover:text-white cursor-pointer p-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
               aria-label="Dismiss template loaded notice"
             >
-              <X size={14} />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -814,10 +815,10 @@ export const ClaimPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setRegistrationNotice(null)}
-              className="text-emerald-400 hover:text-white cursor-pointer p-0.5"
-              aria-label="Dismiss notice"
+              className="text-emerald-400 hover:text-white cursor-pointer p-1 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+              aria-label="Dismiss registration notice"
             >
-              <X size={14} />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -841,10 +842,11 @@ export const ClaimPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => claimFileInputRef.current?.click()}
-                className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer shadow-sm hover:brightness-110 transition-all"
+                className="btn-pill btn-pill-sky text-xs py-2 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer shadow-sm hover:brightness-110 transition-all min-h-[44px]"
                 title="Import a claim file (JSON) to populate credentials directly"
+                aria-label="Import a claim file"
               >
-                <Upload size={13} />
+                <Upload size={14} aria-hidden="true" />
                 <span>Import claim file</span>
               </button>
 
@@ -854,20 +856,22 @@ export const ClaimPage: React.FC = () => {
                   setTemplateTab('custom');
                   setShowTemplateModal(true);
                 }}
-                className="btn-pill btn-pill-outline text-xs py-1.5 px-3 flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 cursor-pointer"
+                className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 cursor-pointer min-h-[44px]"
                 title="Prompt or paste a custom JSON claim voucher"
+                aria-label="Prompt or paste custom claim voucher"
               >
-                <Code2 size={13} />
+                <Code2 size={14} aria-hidden="true" />
                 <span>Prompt / Paste Voucher</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleExportVoucher}
-                className="btn-pill btn-pill-outline text-xs py-1.5 px-3 flex items-center gap-1.5 text-muted hover:text-text cursor-pointer"
+                className="btn-pill btn-pill-outline text-xs py-2 px-3 flex items-center gap-1.5 text-muted hover:text-text cursor-pointer min-h-[44px]"
                 title="Copy current claim credentials as a sharable JSON voucher"
+                aria-label="Export claim credentials as JSON voucher"
               >
-                <Copy size={13} />
+                <Copy size={14} aria-hidden="true" />
                 <span>{exportedVoucherNotice ? '✓ Copied Voucher!' : 'Export Voucher'}</span>
               </button>
             </div>
@@ -970,13 +974,14 @@ export const ClaimPage: React.FC = () => {
                       key={tpl.id}
                       type="button"
                       onClick={() => handleApplyTemplate(tpl)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 min-h-[44px] ${
                         isSelected
                           ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300'
                           : 'bg-surface-hover hover:bg-surface border-border text-text'
                       }`}
+                      aria-label={`Select template for ${tpl.role}`}
                     >
-                      {isSelected && <Check size={11} className="text-emerald-400" />}
+                      {isSelected && <Check size={12} className="text-emerald-400" aria-hidden="true" />}
                       <span>{tpl.role}</span>
                       <span className="font-mono text-sky-400">
                         ({Number(tpl.amount).toLocaleString()} tDUST)
@@ -1063,7 +1068,7 @@ export const ClaimPage: React.FC = () => {
                   type="button"
                   isProcessing={true}
                   elapsedSeconds={registerAction.elapsedSeconds}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 min-h-[44px]"
                 >
                   <ShieldCheck size={14} className="text-amber-400" />
                   <span>Register to Contract (1AM Wallet)</span>
@@ -1073,7 +1078,8 @@ export const ClaimPage: React.FC = () => {
                   type="button"
                   onClick={() => handleRegisterCurrentAllocation('banner')}
                   disabled={registerAction.isProcessing || claimAction.isProcessing || isProving}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 hover:bg-amber-500/15 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 shrink-0 font-bold border-amber-500/40 text-amber-300 hover:bg-amber-500/15 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 min-h-[44px]"
+                  aria-label="Register allocation to contract using 1AM wallet"
                 >
                   {registerAction.isProcessing ? (
                     <>
@@ -1096,26 +1102,28 @@ export const ClaimPage: React.FC = () => {
           {/* Quick Import Bar */}
           <div className="p-3.5 bg-surface border border-dashed border-border hover:border-emerald-400/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors">
             <div className="flex items-center gap-2 text-muted">
-              <Upload size={16} className="text-emerald-400 shrink-0" />
+              <Upload size={16} className="text-emerald-400 shrink-0" aria-hidden="true" />
               <span>Have a saved claim file? Upload your JSON file to populate credentials automatically.</span>
             </div>
             <button
               type="button"
               onClick={() => claimFileInputRef.current?.click()}
-              className="btn-pill btn-pill-outline text-xs py-1.5 px-3.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto font-semibold"
+              className="btn-pill btn-pill-outline text-xs py-2 px-3.5 text-emerald-400 hover:text-emerald-300 border-emerald-500/30 flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto font-semibold min-h-[44px]"
+              aria-label="Import claim file from your device"
             >
-              <Upload size={12} />
+              <Upload size={13} aria-hidden="true" />
               <span>Import claim file</span>
             </button>
           </div>
 
           {/* Recipient Identity Secret */}
           <div>
-            <label className="editorial-label flex items-center justify-between">
+            <label htmlFor="claim-recipient-secret" className="editorial-label flex items-center justify-between">
               <span>Recipient Identity Secret (Private Witness)</span>
               <span className="text-[10px] font-mono text-muted lowercase">never revealed on-chain</span>
             </label>
             <input
+              id="claim-recipient-secret"
               type="text"
               required
               value={recipientSecret}
@@ -1132,7 +1140,7 @@ export const ClaimPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                <label className="editorial-label inline-flex items-center gap-1 mb-0">
+                <label htmlFor="claim-amount" className="editorial-label inline-flex items-center gap-1 mb-0">
                   <span>Allocated Payout Amount (tDUST)</span>
                   <InfoTooltip term="tDUST" />
                 </label>
@@ -1147,6 +1155,7 @@ export const ClaimPage: React.FC = () => {
                 </span>
               </div>
               <input
+                id="claim-amount"
                 type="number"
                 min="1"
                 required
@@ -1161,11 +1170,12 @@ export const ClaimPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="editorial-label inline-flex items-center gap-1">
+              <label htmlFor="claim-salt" className="editorial-label inline-flex items-center gap-1">
                 <span>Cryptographic Blinding Salt (32-byte Hex)</span>
                 <InfoTooltip term="salt" />
               </label>
               <input
+                id="claim-salt"
                 type="text"
                 required
                 value={salt}
@@ -1181,11 +1191,12 @@ export const ClaimPage: React.FC = () => {
 
           {/* Distribution Batch ID */}
           <div>
-            <label className="editorial-label inline-flex items-center gap-1">
+            <label htmlFor="claim-dist-id" className="editorial-label inline-flex items-center gap-1">
               <span>Distribution Batch ID</span>
               <InfoTooltip term="distribution ID" />
             </label>
             <input
+              id="claim-dist-id"
               type="text"
               required
               value={distId}
@@ -1200,7 +1211,7 @@ export const ClaimPage: React.FC = () => {
 
           {/* Nullifier Secret */}
           <div>
-            <label className="editorial-label flex items-center justify-between">
+            <label htmlFor="claim-spend-secret" className="editorial-label flex items-center justify-between">
               <span className="inline-flex items-center gap-1">
                 <span>Nullifier Spending Key (Auto-Generated Entropy)</span>
                 <InfoTooltip term="nullifier" />
@@ -1208,6 +1219,7 @@ export const ClaimPage: React.FC = () => {
               <span className="text-[10px] font-mono text-muted lowercase">ensures un-linkability</span>
             </label>
             <input
+              id="claim-spend-secret"
               type="text"
               value={claimSpendSecret}
               onChange={(e) => setClaimSpendSecret(e.target.value)}
@@ -1266,10 +1278,11 @@ export const ClaimPage: React.FC = () => {
                       href="https://www.lace.io"
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline"
+                      className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 font-bold no-underline min-h-[44px]"
+                      aria-label="Install Midnight Lace wallet"
                     >
                       <span>Install Midnight Lace</span>
-                      <ExternalLink size={13} />
+                      <ExternalLink size={13} aria-hidden="true" />
                     </a>
                     <button
                       type="button"
@@ -1281,7 +1294,8 @@ export const ClaimPage: React.FC = () => {
                           toast.error(err, { title: 'Wallet Connection Failed' });
                         }
                       }}
-                      className="btn-pill btn-pill-outline text-xs py-1.5 px-3 cursor-pointer"
+                      className="btn-pill btn-pill-outline text-xs py-2 px-3 cursor-pointer min-h-[44px]"
+                      aria-label="Try connecting wallet again"
                     >
                       Try again
                     </button>
@@ -1295,7 +1309,8 @@ export const ClaimPage: React.FC = () => {
                           toast.error(err, { title: 'Simulation Error' });
                         }
                       }}
-                      className="text-xs text-muted hover:text-text underline cursor-pointer ml-1"
+                      className="text-xs text-muted hover:text-text underline cursor-pointer ml-1 min-h-[44px] inline-flex items-center"
+                      aria-label="Switch to Demo Simulator"
                     >
                       or switch to Demo Simulator
                     </button>
@@ -1310,7 +1325,7 @@ export const ClaimPage: React.FC = () => {
             <div className="p-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 font-bold text-base">
-                  <Check size={18} />
+                  <Check size={18} aria-hidden="true" />
                   <span>{claimResult.message}</span>
                 </div>
                 <span className="font-mono text-xs text-emerald-300">{claimResult.timestamp}</span>
@@ -1327,9 +1342,10 @@ export const ClaimPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleCopy(claimResult.nullifier, 'nullifier')}
-                      className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer"
+                      className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                      aria-label="Copy unlinkable nullifier"
                     >
-                      {copiedField === 'nullifier' ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedField === 'nullifier' ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -1344,9 +1360,10 @@ export const ClaimPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleCopy(claimResult.commitment, 'commitment')}
-                      className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer"
+                      className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                      aria-label="Copy committed leaf"
                     >
-                      {copiedField === 'commitment' ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedField === 'commitment' ? <Check size={14} className="text-emerald-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -1365,10 +1382,11 @@ export const ClaimPage: React.FC = () => {
                     href={getExplorerContractUrl(targetContractAddress, wallet.network || 'preprod')}
                     target="_blank"
                     rel="noreferrer"
-                    className="btn-pill btn-pill-outline text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-emerald-400"
+                    className="btn-pill btn-pill-outline text-xs py-2 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-semibold text-emerald-400 min-h-[44px]"
+                    aria-label="View contract on Midnight explorer"
                   >
                     <span>Contract on Explorer</span>
-                    <ExternalLink size={12} />
+                    <ExternalLink size={12} aria-hidden="true" />
                   </a>
                 </div>
 
@@ -1384,10 +1402,11 @@ export const ClaimPage: React.FC = () => {
                             navigator.clipboard.writeText(`0x${claimResult.txHash!.replace(/^0x/, '')}`);
                             toast.info('Transaction hash copied to clipboard!');
                           }}
-                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px]"
+                          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-text cursor-pointer transition-colors inline-flex items-center gap-1 text-[11px] min-h-[44px] min-w-[44px]"
                           title="Copy transaction hash"
+                          aria-label="Copy transaction hash"
                         >
-                          <Copy size={12} />
+                          <Copy size={13} aria-hidden="true" />
                           <span>Copy</span>
                         </button>
                       </div>
@@ -1399,10 +1418,11 @@ export const ClaimPage: React.FC = () => {
                       href={getExplorerTxUrl(claimResult.txHash, wallet.network || 'preprod')}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-pill btn-pill-sky text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold"
+                      className="btn-pill btn-pill-sky text-xs py-2 px-3 inline-flex items-center gap-1.5 shrink-0 no-underline font-bold min-h-[44px]"
+                      aria-label="View transaction on Midnight explorer"
                     >
                       <span>View on explorer</span>
-                      <ExternalLink size={12} />
+                      <ExternalLink size={12} aria-hidden="true" />
                     </a>
                   </div>
                 )}
@@ -1414,10 +1434,11 @@ export const ClaimPage: React.FC = () => {
                 </p>
                 <Link
                   to="/vault"
-                  className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5"
+                  className="btn-pill btn-pill-sky text-xs py-2 px-3.5 inline-flex items-center gap-1.5 min-h-[44px]"
+                  aria-label="View vault dashboard"
                 >
                   <span>View in Dashboard</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={13} aria-hidden="true" />
                 </Link>
               </div>
             </div>
@@ -1432,7 +1453,7 @@ export const ClaimPage: React.FC = () => {
                   isProcessing={claimAction.isProcessing || (isProving && !registerAction.isProcessing)}
                   elapsedSeconds={claimAction.elapsedSeconds || provingElapsedSeconds}
                   disabled={!isClaimFormValid || registerAction.isProcessing}
-                  className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
                 >
                   <ShieldCheck size={16} />
                   <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
@@ -1441,7 +1462,7 @@ export const ClaimPage: React.FC = () => {
                 <button
                   type="button"
                   disabled={true}
-                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-not-allowed bg-amber-500 text-ink border border-amber-600"
+                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-not-allowed bg-amber-500 text-ink border border-amber-600 min-h-[44px]"
                 >
                   <Loader2 size={16} className="animate-spin text-ink" />
                   <span>Registering Allocation ({registerAction.elapsedSeconds}s)...</span>
@@ -1453,7 +1474,7 @@ export const ClaimPage: React.FC = () => {
                   isProcessing={registerAction.isProcessing}
                   elapsedSeconds={registerAction.elapsedSeconds}
                   disabled={!isClaimFormValid || claimAction.isProcessing || isProving}
-                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm"
+                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm min-h-[44px]"
                 >
                   <ShieldCheck size={16} />
                   <span>Register Allocation on Contract First (1AM Wallet)</span>
@@ -1464,8 +1485,9 @@ export const ClaimPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSimulateCheat}
-                className="btn-pill btn-pill-outline py-3.5 px-4 text-xs font-semibold text-muted hover:text-text cursor-pointer"
+                className="btn-pill btn-pill-outline py-3.5 px-4 text-xs font-semibold text-muted hover:text-text cursor-pointer min-h-[44px]"
                 title="Tamper with allocation amount to test cryptographic ZK circuit rejection"
+                aria-label="Simulate tampered allocation to test rejection"
               >
                 Simulate Cheat (+10k tDUST)
               </button>
@@ -1499,12 +1521,17 @@ export const ClaimPage: React.FC = () => {
 
       {/* Template & Voucher Prompt Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="template-modal-title"
+        >
           <div className="bg-bg-elev border border-border rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2.5">
                 <Sparkles size={20} className="text-emerald-400" />
-                <h3 className="font-display text-lg font-bold text-text">
+                <h3 id="template-modal-title" className="font-display text-lg font-bold text-text">
                   Prompt Claim Template or Voucher
                 </h3>
               </div>
@@ -1514,19 +1541,19 @@ export const ClaimPage: React.FC = () => {
                   setShowTemplateModal(false);
                   setVoucherError(null);
                 }}
-                className="p-1 rounded text-muted hover:text-text cursor-pointer"
+                className="p-1 rounded text-muted hover:text-text cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                 aria-label="Close template modal"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex items-center gap-2 border-b border-border pb-2 text-xs">
+            <div className="flex items-center gap-2 border-b border-border pb-2 text-xs flex-wrap">
               <button
                 type="button"
                 onClick={() => setTemplateTab('featured')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-colors cursor-pointer ${
+                className={`px-3.5 py-2 rounded-full font-semibold transition-colors cursor-pointer min-h-[44px] ${
                   templateTab === 'featured'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     : 'text-muted hover:text-text'
@@ -1537,7 +1564,7 @@ export const ClaimPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTemplateTab('custom')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-colors cursor-pointer ${
+                className={`px-3.5 py-2 rounded-full font-semibold transition-colors cursor-pointer min-h-[44px] ${
                   templateTab === 'custom'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     : 'text-muted hover:text-text'
@@ -1592,7 +1619,8 @@ export const ClaimPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleApplyTemplate(tpl)}
-                          className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 font-bold cursor-pointer"
+                          className="btn-pill btn-pill-sky text-xs py-2 px-4 shrink-0 font-bold cursor-pointer min-h-[44px]"
+                          aria-label={`Prompt and apply template for ${tpl.role}`}
                         >
                           Prompt & Apply
                         </button>
@@ -1605,7 +1633,7 @@ export const ClaimPage: React.FC = () => {
               <div className="space-y-4">
                 {/* Upload Claim File Box */}
                 <div className="p-4 rounded-lg border border-dashed border-border bg-surface text-center space-y-2">
-                  <Upload size={22} className="mx-auto text-emerald-400" />
+                  <Upload size={22} className="mx-auto text-emerald-400" aria-hidden="true" />
                   <div className="text-xs font-bold text-text">Upload Claim File (JSON)</div>
                   <p className="text-[11px] text-muted">
                     Import a JSON claim file exported from the distribution creation modal or copied from your organizer.
@@ -1613,9 +1641,10 @@ export const ClaimPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => claimFileInputRef.current?.click()}
-                    className="btn-pill btn-pill-sky text-xs py-1.5 px-4 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="btn-pill btn-pill-sky text-xs py-2 px-4 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm min-h-[44px]"
+                    aria-label="Upload claim file from disk"
                   >
-                    <Upload size={13} />
+                    <Upload size={14} aria-hidden="true" />
                     <span>Upload JSON File</span>
                   </button>
                 </div>
@@ -1624,21 +1653,23 @@ export const ClaimPage: React.FC = () => {
                   — or paste voucher JSON directly —
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-text">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label htmlFor="voucher-textarea" className="text-xs font-semibold text-text">
                     Paste Voucher JSON or Template Object:
                   </label>
                   <button
                     type="button"
                     onClick={handleLoadSampleVoucherIntoModal}
-                    className="text-[11px] text-sky-400 hover:underline cursor-pointer flex items-center gap-1 font-semibold"
+                    className="text-xs text-sky-400 hover:underline cursor-pointer flex items-center gap-1 font-semibold min-h-[44px]"
+                    aria-label="Insert sample voucher JSON"
                   >
-                    <Code2 size={13} />
+                    <Code2 size={13} aria-hidden="true" />
                     <span>Insert Sample Voucher</span>
                   </button>
                 </div>
 
                 <textarea
+                  id="voucher-textarea"
                   rows={7}
                   value={pastedVoucherText}
                   onChange={(e) => setPastedVoucherText(e.target.value)}
@@ -1653,23 +1684,25 @@ export const ClaimPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex justify-end gap-2 pt-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
                       setShowTemplateModal(false);
                       setVoucherError(null);
                     }}
-                    className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer"
+                    className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer min-h-[44px]"
+                    aria-label="Cancel voucher modal"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleParseVoucher}
-                    className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold cursor-pointer flex items-center gap-1.5"
+                    className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold cursor-pointer flex items-center gap-1.5 min-h-[44px]"
+                    aria-label="Parse and populate claim form"
                   >
-                    <Upload size={13} />
+                    <Upload size={14} aria-hidden="true" />
                     <span>Parse & Populate Claim Form</span>
                   </button>
                 </div>
@@ -1716,10 +1749,10 @@ export const ClaimPage: React.FC = () => {
                   setShowImportSelectorModal(false);
                   setImportedClaimsList(null);
                 }}
-                className="p-1 rounded text-muted hover:text-text cursor-pointer"
+                className="p-1 rounded text-muted hover:text-text cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
                 aria-label="Close selector modal"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -1748,10 +1781,11 @@ export const ClaimPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => applySingleClaim(claim)}
-                    className="btn-pill btn-pill-sky text-xs py-1.5 px-3.5 font-bold cursor-pointer shrink-0 flex items-center gap-1"
+                    className="btn-pill btn-pill-sky text-xs py-2 px-3.5 font-bold cursor-pointer shrink-0 flex items-center gap-1 min-h-[44px]"
+                    aria-label={`Select and load claim for ${claim.role}`}
                   >
                     <span>Select & Load</span>
-                    <ArrowRight size={12} />
+                    <ArrowRight size={13} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -1764,7 +1798,8 @@ export const ClaimPage: React.FC = () => {
                   setShowImportSelectorModal(false);
                   setImportedClaimsList(null);
                 }}
-                className="btn-pill btn-pill-outline text-xs py-1.5 px-4 cursor-pointer"
+                className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer min-h-[44px]"
+                aria-label="Cancel selection"
               >
                 Cancel
               </button>
