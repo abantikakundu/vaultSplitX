@@ -25,6 +25,7 @@ import { formatHumanReadableError } from '../utils/formatError';
 import { getExplorerTxUrl, getExplorerContractUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
+import { FieldError } from '../components/common/FieldError';
 
 interface RecipientRow {
   id: string;
@@ -126,7 +127,142 @@ export const CreatePage: React.FC = () => {
   }, [recipients, ruleType, totalFunds]);
 
   const remainingFunds = totalFunds - allocatedTotal;
-  const isAllocationBalanced = remainingFunds === 0n && totalFunds > 0n && recipients.length > 0;
+
+  // Validation: Title
+  const titleError = useMemo(() => {
+    if (!distTitle.trim()) return 'Distribution name is required.';
+    return null;
+  }, [distTitle]);
+
+  // Validation: Total Vault Funds (Amounts must be positive)
+  const totalFundsError = useMemo(() => {
+    if (!totalFundsStr.trim()) return 'Total vault funds is required.';
+    try {
+      const val = BigInt(totalFundsStr);
+      if (val <= 0n) return 'Total vault funds must be a positive number greater than 0.';
+    } catch {
+      return 'Total vault funds must be a valid positive integer.';
+    }
+    return null;
+  }, [totalFundsStr]);
+
+  // Validation: Recipients (Amounts must be positive, no empty or duplicate recipients)
+  const recipientErrors = useMemo(() => {
+    const errors: Record<string, { role?: string; amount?: string; seed?: string }> = {};
+
+    const roleCounts: Record<string, number> = {};
+    const seedCounts: Record<string, number> = {};
+
+    for (const r of recipients) {
+      const cleanRole = r.role.trim().toLowerCase();
+      if (cleanRole) {
+        roleCounts[cleanRole] = (roleCounts[cleanRole] || 0) + 1;
+      }
+      const cleanSeed = r.seed.trim().toLowerCase();
+      if (cleanSeed) {
+        seedCounts[cleanSeed] = (seedCounts[cleanSeed] || 0) + 1;
+      }
+    }
+
+    for (const r of recipients) {
+      const rowErr: { role?: string; amount?: string; seed?: string } = {};
+      const cleanRole = r.role.trim();
+      if (!cleanRole) {
+        rowErr.role = 'Recipient role/name cannot be empty.';
+      } else if (roleCounts[cleanRole.toLowerCase()] > 1) {
+        rowErr.role = 'Duplicate recipient: role/name must be unique.';
+      }
+
+      if (ruleType === 'fixed') {
+        if (!r.amount.trim()) {
+          rowErr.amount = 'Amount is required.';
+        } else {
+          try {
+            const amt = BigInt(r.amount);
+            if (amt <= 0n) {
+              rowErr.amount = 'Amount must be greater than 0 tDUST.';
+            }
+          } catch {
+            rowErr.amount = 'Amount must be a valid positive integer.';
+          }
+        }
+      } else if (ruleType === 'percentage') {
+        if (!r.percentage.trim()) {
+          rowErr.amount = 'Share percentage is required.';
+        } else {
+          const num = parseFloat(r.percentage);
+          if (isNaN(num) || num <= 0) {
+            rowErr.amount = 'Percentage must be greater than 0%.';
+          } else if (num > 100) {
+            rowErr.amount = 'Percentage cannot exceed 100%.';
+          }
+        }
+      } else {
+        if (!r.weight.trim()) {
+          rowErr.amount = 'Contribution weight is required.';
+        } else {
+          const num = parseFloat(r.weight);
+          if (isNaN(num) || num <= 0) {
+            rowErr.amount = 'Weight must be greater than 0.';
+          }
+        }
+      }
+
+      const cleanSeed = r.seed.trim();
+      if (!cleanSeed) {
+        rowErr.seed = 'Secret seed cannot be empty.';
+      } else if (seedCounts[cleanSeed.toLowerCase()] > 1) {
+        rowErr.seed = 'Duplicate seed: each recipient must have a unique secret seed.';
+      }
+
+      errors[r.id] = rowErr;
+    }
+
+    return errors;
+  }, [recipients, ruleType]);
+
+  const hasRecipientErrors = useMemo(() => {
+    return Object.values(recipientErrors).some((err) => err.role || err.amount || err.seed);
+  }, [recipientErrors]);
+
+  // Validation: Sum of allocations must not exceed total vault funds
+  const allocationsSumError = useMemo(() => {
+    if (allocatedTotal > totalFunds && totalFunds > 0n) {
+      return `Sum of allocations (${Number(allocatedTotal).toLocaleString()} tDUST) exceeds total vault funds (${Number(totalFunds).toLocaleString()} tDUST).`;
+    }
+    if (ruleType === 'percentage') {
+      const totalPct = recipients.reduce((acc, r) => acc + (parseFloat(r.percentage) || 0), 0);
+      if (totalPct > 100) {
+        return `Total percentage (${totalPct.toFixed(1)}%) exceeds 100%.`;
+      }
+    }
+    return null;
+  }, [allocatedTotal, totalFunds, ruleType, recipients]);
+
+  // Form is valid when:
+  // - Amounts are positive
+  // - No empty or duplicate recipients
+  // - Sum of allocations does not exceed total vault funds
+  const isFormValid = useMemo(() => {
+    return (
+      !titleError &&
+      !totalFundsError &&
+      !hasRecipientErrors &&
+      !allocationsSumError &&
+      recipients.length > 0 &&
+      totalFunds > 0n &&
+      allocatedTotal > 0n &&
+      allocatedTotal <= totalFunds
+    );
+  }, [
+    titleError,
+    totalFundsError,
+    hasRecipientErrors,
+    allocationsSumError,
+    recipients.length,
+    totalFunds,
+    allocatedTotal,
+  ]);
 
   // Add & Remove Recipients
   const handleAddRecipient = () => {
@@ -158,10 +294,17 @@ export const CreatePage: React.FC = () => {
   const handleSubmitDistribution = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isProving) return;
-    if (!isAllocationBalanced) {
-      const msg = 'The total allocated amount must equal the total vault funds.';
+    if (!isFormValid) {
+      let msg = 'Please fix all inline validation errors before submitting.';
+      if (allocationsSumError) {
+        msg = allocationsSumError;
+      } else if (hasRecipientErrors) {
+        msg = 'Please correct recipient errors: amounts must be positive, and no empty or duplicate recipients.';
+      } else if (totalFundsError) {
+        msg = totalFundsError;
+      }
       setSubmitError(msg);
-      toast.error(msg, { title: 'Unbalanced Allocation' });
+      toast.error(msg, { title: 'Invalid Form' });
       return;
     }
 
@@ -388,8 +531,9 @@ export const CreatePage: React.FC = () => {
                       value={distTitle}
                       onChange={(e) => setDistTitle(e.target.value)}
                       placeholder="e.g. Q3 Contributor Treasury Disbursement"
-                      className="editorial-input"
+                      className={`editorial-input ${titleError ? 'editorial-input-error' : ''}`}
                     />
+                    <FieldError message={titleError} />
                   </div>
 
                   <div>
@@ -425,11 +569,22 @@ export const CreatePage: React.FC = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="dist-total" className="editorial-label inline-flex items-center gap-1">
-                      <span>Total Vault Funds (tDUST)</span>
-                      <InfoTooltip term="vault" />
-                      <InfoTooltip term="tDUST" />
-                    </label>
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                      <label htmlFor="dist-total" className="editorial-label inline-flex items-center gap-1 mb-0">
+                        <span>Total Vault Funds (tDUST)</span>
+                        <InfoTooltip term="vault" />
+                        <InfoTooltip term="tDUST" />
+                      </label>
+                      <span
+                        className={`remaining-counter-badge ${
+                          remainingFunds < 0n
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        Remaining: {remainingFunds < 0n ? `-${Number(-remainingFunds).toLocaleString()}` : Number(remainingFunds).toLocaleString()} tDUST
+                      </span>
+                    </div>
                     <div className="relative">
                       <input
                         id="dist-total"
@@ -438,13 +593,16 @@ export const CreatePage: React.FC = () => {
                         required
                         value={totalFundsStr}
                         onChange={(e) => setTotalFundsStr(e.target.value)}
-                        className="editorial-input editorial-input-mono text-lg font-bold text-sky-400"
+                        className={`editorial-input editorial-input-mono text-lg font-bold text-sky-400 ${
+                          totalFundsError ? 'editorial-input-error' : ''
+                        }`}
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 font-sans text-xs font-bold text-muted inline-flex items-center gap-1">
                         <span>tDUST</span>
                         <InfoTooltip term="tDUST" />
                       </span>
                     </div>
+                    <FieldError message={totalFundsError} />
                   </div>
 
                   {/* Quick-Pick Chips */}
@@ -534,7 +692,7 @@ export const CreatePage: React.FC = () => {
 
                 {/* Running Allocated Bar */}
                 <div className="p-4 bg-surface-hover border border-border rounded space-y-2">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between text-xs flex-wrap gap-2">
                     <span className="font-semibold text-text inline-flex items-center gap-1">
                       <span>
                         Allocated {Number(allocatedTotal).toLocaleString()} of {Number(totalFunds).toLocaleString()} tDUST
@@ -542,19 +700,15 @@ export const CreatePage: React.FC = () => {
                       <InfoTooltip term="tDUST" />
                     </span>
                     <span
-                      className={`font-mono font-bold ${
-                        remainingFunds === 0n
-                          ? 'text-emerald-400'
-                          : remainingFunds > 0n
-                          ? 'text-sky-400'
-                          : 'text-rose-400'
+                      className={`remaining-counter-badge ${
+                        remainingFunds < 0n
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                          : remainingFunds === 0n
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-sky-400/10 text-sky-400 border border-sky-400/30'
                       }`}
                     >
-                      {remainingFunds === 0n
-                        ? '100% Balanced'
-                        : remainingFunds > 0n
-                        ? `${Number(remainingFunds).toLocaleString()} tDUST Remaining`
-                        : `${Number(-remainingFunds).toLocaleString()} tDUST Overallocated`}
+                      Remaining: {remainingFunds < 0n ? `-${Number(-remainingFunds).toLocaleString()}` : Number(remainingFunds).toLocaleString()} tDUST
                     </span>
                   </div>
 
@@ -575,6 +729,8 @@ export const CreatePage: React.FC = () => {
                       }}
                     />
                   </div>
+
+                  {allocationsSumError && <FieldError message={allocationsSumError} className="pt-1" />}
                 </div>
 
                 {/* Recipients Table / Rows */}
@@ -584,7 +740,7 @@ export const CreatePage: React.FC = () => {
                       key={rec.id}
                       className="p-4 bg-surface border border-border rounded space-y-3"
                     >
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
                         {/* Contributor Label */}
                         <div className="sm:col-span-5">
                           <label className="text-[10px] font-bold text-muted uppercase block mb-1">
@@ -596,8 +752,9 @@ export const CreatePage: React.FC = () => {
                             value={rec.role}
                             onChange={(e) => handleUpdateRecipient(rec.id, 'role', e.target.value)}
                             placeholder="e.g. Frontend Engineer"
-                            className="editorial-input text-xs"
+                            className={`editorial-input text-xs ${recipientErrors[rec.id]?.role ? 'editorial-input-error' : ''}`}
                           />
+                          <FieldError message={recipientErrors[rec.id]?.role} />
                         </div>
 
                         {/* Amount / Pct / Weight depending on ruleType */}
@@ -617,7 +774,7 @@ export const CreatePage: React.FC = () => {
                           <input
                             type="number"
                             required
-                            min="0"
+                            min="1"
                             step={ruleType === 'percentage' ? '0.1' : '1'}
                             value={
                               ruleType === 'fixed'
@@ -637,8 +794,11 @@ export const CreatePage: React.FC = () => {
                                 e.target.value
                               )
                             }
-                            className="editorial-input editorial-input-mono text-xs font-bold text-sky-400"
+                            className={`editorial-input editorial-input-mono text-xs font-bold text-sky-400 ${
+                              recipientErrors[rec.id]?.amount ? 'editorial-input-error' : ''
+                            }`}
                           />
+                          <FieldError message={recipientErrors[rec.id]?.amount} />
                         </div>
 
                         {/* Secret Seed */}
@@ -653,9 +813,12 @@ export const CreatePage: React.FC = () => {
                             type="text"
                             value={rec.seed}
                             onChange={(e) => handleUpdateRecipient(rec.id, 'seed', e.target.value)}
-                            className="editorial-input editorial-input-mono text-[11px] text-muted truncate"
+                            className={`editorial-input editorial-input-mono text-[11px] text-muted truncate ${
+                              recipientErrors[rec.id]?.seed ? 'editorial-input-error' : ''
+                            }`}
                             title="Private witness seed used for ZK entitlement proof"
                           />
+                          <FieldError message={recipientErrors[rec.id]?.seed} />
                         </div>
 
                         {/* Delete Row */}
@@ -876,12 +1039,24 @@ export const CreatePage: React.FC = () => {
                     type="submit"
                     isProcessing={isSubmitting || isProving}
                     elapsedSeconds={elapsedSeconds || provingElapsedSeconds}
-                    disabled={!isAllocationBalanced}
-                    className="btn-pill btn-pill-sky py-3.5 px-8 text-sm font-bold w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                    disabled={!isFormValid || isSubmitting || isProving}
+                    className="btn-pill btn-pill-sky py-3.5 px-8 text-sm font-bold w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ShieldCheck size={16} />
                     <span>Deploy & Register to Contract (1AM Wallet)</span>
                   </ProofActionButton>
+                  {!isFormValid && (
+                    <div className="flex items-center gap-1.5 text-xs text-rose-400 pt-1 font-medium">
+                      <AlertCircle size={13} className="shrink-0" />
+                      <span>
+                        {allocationsSumError ||
+                          (hasRecipientErrors && 'Please fix recipient errors: amounts must be positive, and no empty or duplicate recipients.') ||
+                          totalFundsError ||
+                          titleError ||
+                          'Complete all required fields with positive amounts and unique recipients to submit.'}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-[11px] text-muted">
                     Prompts 1AM wallet to execute <code className="text-sky-400 font-mono">registerAllocation</code> on contract <code className="text-muted font-mono">0x{targetContractAddress.slice(0, 10)}...{targetContractAddress.slice(-6)}</code>.
                   </p>
@@ -914,6 +1089,13 @@ export const CreatePage: React.FC = () => {
                     <span className="text-xs font-mono font-normal inline-flex items-center gap-0.5">
                       <span>tDUST</span>
                       <InfoTooltip term="tDUST" />
+                    </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-ink/10 flex items-center justify-between text-xs">
+                    <span className="text-ink/80 font-bold uppercase text-[10px] tracking-wider">Live Balance</span>
+                    <span className={`font-mono font-bold text-xs ${remainingFunds < 0n ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      Remaining: {remainingFunds < 0n ? `-${Number(-remainingFunds).toLocaleString()}` : Number(remainingFunds).toLocaleString()} tDUST
                     </span>
                   </div>
 

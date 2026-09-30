@@ -279,6 +279,15 @@
 .border-emerald-400\/30 { border-color: rgba(52, 211, 153, 0.3); }
 .bg-surface\/30 { background-color: rgba(18, 27, 46, 0.3); }
 .bg-surface-hover\/40 { background-color: rgba(23, 36, 61, 0.4); }
+.bg-rose-500 { background-color: #EF4444; }
+.bg-rose-500\/10 { background-color: rgba(248, 113, 113, 0.1); }
+.bg-rose-500\/20 { background-color: rgba(248, 113, 113, 0.2); }
+.border-rose-400 { border-color: #F87171; }
+.border-rose-500 { border-color: #EF4444; }
+.border-rose-500\/30 { border-color: rgba(248, 113, 113, 0.3); }
+.border-rose-500\/50 { border-color: rgba(248, 113, 113, 0.5); }
+.text-rose-500 { color: #EF4444; }
+.cursor-not-allowed { cursor: not-allowed; }
 
 /* Responsive Media Queries */
 @media (min-width: 640px) {

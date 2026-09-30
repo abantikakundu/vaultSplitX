@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Vault,
@@ -23,6 +23,7 @@ import { formatHumanReadableError } from '../utils/formatError';
 import { getExplorerContractUrl, getExplorerTxUrl } from '../utils/config';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
+import { FieldError } from '../components/common/FieldError';
 
 export const VaultPage: React.FC = () => {
   const {
@@ -53,6 +54,77 @@ export const VaultPage: React.FC = () => {
   const [newSeed, setNewSeed] = useState('');
   const [addError, setAddError] = useState<string | null>(null);
 
+  // Vault totals & allocations calculations
+  const totalFunds = vaultState?.totalVaultFunds ?? 0n;
+  const allocationsCount = vaultState?.allocations.length ?? 0;
+  const claimsCount = vaultState?.claimedCount ?? 0;
+  const isClosed = vaultState?.isClosed ?? false;
+  const claimedPercent = allocationsCount > 0 ? Math.round((claimsCount / allocationsCount) * 100) : 0;
+
+  const currentAllocated = useMemo(() => {
+    return (
+      vaultState?.allocations.reduce((acc, a) => {
+        try {
+          return acc + BigInt(a.amount || 0);
+        } catch {
+          return acc;
+        }
+      }, 0n) ?? 0n
+    );
+  }, [vaultState?.allocations]);
+
+  const remainingVaultFunds = totalFunds > currentAllocated ? totalFunds - currentAllocated : 0n;
+
+  // Modal live calculations and inline validation
+  const parsedModalAmount = useMemo(() => {
+    try {
+      const val = BigInt(newAmount || '0');
+      return val > 0n ? val : 0n;
+    } catch {
+      return 0n;
+    }
+  }, [newAmount]);
+
+  const remainingAfterModal = totalFunds - (currentAllocated + parsedModalAmount);
+
+  const modalRoleError = useMemo(() => {
+    if (!showAddModal) return null;
+    const cleanRole = newRole.trim();
+    if (!cleanRole) return 'Recipient role/name cannot be empty.';
+    const isDuplicate = vaultState?.allocations.some(
+      (a) => a.role.trim().toLowerCase() === cleanRole.toLowerCase()
+    );
+    if (isDuplicate) {
+      return `Duplicate recipient: an allocation for "${cleanRole}" already exists in this vault.`;
+    }
+    return null;
+  }, [newRole, showAddModal, vaultState?.allocations]);
+
+  const modalAmountError = useMemo(() => {
+    if (!showAddModal) return null;
+    if (!newAmount.trim()) return 'Payment amount is required.';
+    try {
+      const amt = BigInt(newAmount);
+      if (amt <= 0n) return 'Amount must be a positive number greater than 0 tDUST.';
+      if (currentAllocated + amt > totalFunds) {
+        return `Sum of allocations exceeds total vault funds (${Number(totalFunds).toLocaleString()} tDUST). Only ${Number(remainingVaultFunds).toLocaleString()} tDUST remaining.`;
+      }
+    } catch {
+      return 'Amount must be a valid positive integer.';
+    }
+    return null;
+  }, [newAmount, showAddModal, currentAllocated, totalFunds, remainingVaultFunds]);
+
+  const isModalValid = useMemo(() => {
+    return (
+      !modalRoleError &&
+      !modalAmountError &&
+      newRole.trim().length > 0 &&
+      parsedModalAmount > 0n &&
+      currentAllocated + parsedModalAmount <= totalFunds
+    );
+  }, [modalRoleError, modalAmountError, newRole, parsedModalAmount, currentAllocated, totalFunds]);
+
   // Close distribution confirmation
   const [copiedCommitment, setCopiedCommitment] = useState<string | null>(null);
 
@@ -75,10 +147,10 @@ export const VaultPage: React.FC = () => {
   const handleAddNewAllocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (addAllocAction.isProcessing || isProving) return;
-    if (!newAmount || BigInt(newAmount) <= 0n) {
-      const msg = 'Amount must be greater than zero.';
+    if (!isModalValid) {
+      const msg = modalRoleError || modalAmountError || 'Please fix all inline errors before registering.';
       setAddError(msg);
-      toast.error(msg, { title: 'Invalid Amount' });
+      toast.error(msg, { title: 'Invalid Form' });
       return;
     }
 
@@ -135,12 +207,6 @@ export const VaultPage: React.FC = () => {
       </div>
     );
   }
-
-  const totalFunds = vaultState?.totalVaultFunds ?? 0n;
-  const allocationsCount = vaultState?.allocations.length ?? 0;
-  const claimsCount = vaultState?.claimedCount ?? 0;
-  const isClosed = vaultState?.isClosed ?? false;
-  const claimedPercent = allocationsCount > 0 ? Math.round((claimsCount / allocationsCount) * 100) : 0;
 
   return (
     <div className="w-full pb-24 space-y-12">
@@ -298,10 +364,15 @@ export const VaultPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Stat 1 */}
           <div className="sharp-card p-6 space-y-2">
-            <span className="text-xs uppercase font-bold text-muted tracking-wider flex items-center gap-1">
-              <span>Total Vault Pool</span>
-              <InfoTooltip term="vault" />
-            </span>
+            <div className="flex items-center justify-between flex-wrap gap-1">
+              <span className="text-xs uppercase font-bold text-muted tracking-wider flex items-center gap-1">
+                <span>Total Vault Pool</span>
+                <InfoTooltip term="vault" />
+              </span>
+              <span className="remaining-counter-badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                Remaining: {Number(remainingVaultFunds).toLocaleString()} tDUST
+              </span>
+            </div>
             <div className="font-display text-3xl font-extrabold text-sky-400 font-mono flex items-center gap-1">
               <span>{Number(totalFunds).toLocaleString()}</span>
               <span className="text-xs font-sans text-muted inline-flex items-center gap-0.5">
@@ -309,7 +380,12 @@ export const VaultPage: React.FC = () => {
                 <InfoTooltip term="tDUST" />
               </span>
             </div>
-            <p className="text-[11px] text-muted">Publicly locked on Midnight</p>
+            <p className="text-[11px] text-muted flex items-center justify-between">
+              <span>Publicly locked on Midnight</span>
+              <span className="font-mono text-muted text-[10px]">
+                Allocated: {Number(currentAllocated).toLocaleString()} tDUST
+              </span>
+            </p>
           </div>
 
           {/* Stat 2 */}
@@ -542,15 +618,27 @@ export const VaultPage: React.FC = () => {
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value)}
                   placeholder="e.g. Protocol Research Lead"
-                  className="editorial-input"
+                  className={`editorial-input ${modalRoleError ? 'editorial-input-error' : ''}`}
                 />
+                <FieldError message={modalRoleError} />
               </div>
 
               <div>
-                <label className="editorial-label inline-flex items-center gap-1">
-                  <span>Payment Amount (tDUST)</span>
-                  <InfoTooltip term="tDUST" />
-                </label>
+                <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                  <label className="editorial-label inline-flex items-center gap-1 mb-0">
+                    <span>Payment Amount (tDUST)</span>
+                    <InfoTooltip term="tDUST" />
+                  </label>
+                  <span
+                    className={`remaining-counter-badge ${
+                      remainingAfterModal < 0n
+                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    Remaining: {remainingAfterModal < 0n ? `-${Number(-remainingAfterModal).toLocaleString()}` : Number(remainingAfterModal).toLocaleString()} tDUST
+                  </span>
+                </div>
                 <input
                   type="number"
                   min="1"
@@ -558,8 +646,11 @@ export const VaultPage: React.FC = () => {
                   value={newAmount}
                   onChange={(e) => setNewAmount(e.target.value)}
                   placeholder="e.g. 20000"
-                  className="editorial-input editorial-input-mono font-bold text-sky-400"
+                  className={`editorial-input editorial-input-mono font-bold text-sky-400 ${
+                    modalAmountError ? 'editorial-input-error' : ''
+                  }`}
                 />
+                <FieldError message={modalAmountError} />
               </div>
 
               <div>
@@ -574,6 +665,18 @@ export const VaultPage: React.FC = () => {
                   placeholder="e.g. contributor_secret_seed"
                   className="editorial-input editorial-input-mono text-xs"
                 />
+              </div>
+
+              {/* Live Remaining Balance Summary */}
+              <div className="p-3 rounded bg-surface-hover border border-border flex items-center justify-between text-xs">
+                <span className="font-semibold text-muted">Vault Remaining Balance:</span>
+                <span
+                  className={`font-mono font-bold ${
+                    remainingAfterModal < 0n ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
+                >
+                  Remaining: {remainingAfterModal < 0n ? `-${Number(-remainingAfterModal).toLocaleString()}` : Number(remainingAfterModal).toLocaleString()} tDUST
+                </span>
               </div>
 
               {addError && (
@@ -602,7 +705,7 @@ export const VaultPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="btn-pill btn-pill-outline text-xs py-2 px-4"
+                  className="btn-pill btn-pill-outline text-xs py-2 px-4 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -610,7 +713,8 @@ export const VaultPage: React.FC = () => {
                   type="submit"
                   isProcessing={addAllocAction.isProcessing || isProving}
                   elapsedSeconds={addAllocAction.elapsedSeconds || provingElapsedSeconds}
-                  className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold flex items-center gap-1.5"
+                  disabled={!isModalValid || addAllocAction.isProcessing || isProving}
+                  className="btn-pill btn-pill-sky text-xs py-2 px-5 font-bold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="inline-flex items-center gap-1">
                     <span>Register Commitment</span>

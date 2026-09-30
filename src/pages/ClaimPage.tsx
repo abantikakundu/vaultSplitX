@@ -30,6 +30,7 @@ import { ContributorAllocation, generateRandomHex32, hexToBytes, bytesToHex } fr
 import { pureCircuits } from '../contract/index.js';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ProofActionButton, useProofAction } from '../components/common/ProofActionButton';
+import { FieldError } from '../components/common/FieldError';
 
 export interface ClaimTemplate {
   id: string;
@@ -169,6 +170,74 @@ export const ClaimPage: React.FC = () => {
     distId ||
     vaultState?.distributionId ||
     'a22378798d24fc24cf961b51ffe2d4046f7581e5e1434a8e6fc0519df4fd374a';
+
+  // Inline Form Validation
+  const secretError = useMemo(() => {
+    if (!recipientSecret.trim()) return 'Recipient identity secret cannot be empty.';
+    return null;
+  }, [recipientSecret]);
+
+  const parsedClaimAmount = useMemo(() => {
+    try {
+      const val = BigInt(amount || '0');
+      return val > 0n ? val : 0n;
+    } catch {
+      return 0n;
+    }
+  }, [amount]);
+
+  const remainingVaultBalance = useMemo(() => {
+    const total = vaultState?.totalVaultFunds ?? 0n;
+    return total - parsedClaimAmount;
+  }, [vaultState?.totalVaultFunds, parsedClaimAmount]);
+
+  const amountError = useMemo(() => {
+    if (!amount.trim()) return 'Allocated payout amount is required.';
+    try {
+      const val = BigInt(amount);
+      if (val <= 0n) return 'Claim amount must be a positive number greater than 0 tDUST.';
+      if (vaultState?.totalVaultFunds && val > vaultState.totalVaultFunds) {
+        return `Claim amount exceeds total vault funds (${Number(vaultState.totalVaultFunds).toLocaleString()} tDUST).`;
+      }
+    } catch {
+      return 'Claim amount must be a valid positive integer.';
+    }
+    return null;
+  }, [amount, vaultState?.totalVaultFunds]);
+
+  const saltError = useMemo(() => {
+    if (!salt.trim()) return 'Cryptographic blinding salt cannot be empty.';
+    return null;
+  }, [salt]);
+
+  const distIdError = useMemo(() => {
+    if (!distId.trim()) return 'Distribution Batch ID cannot be empty.';
+    return null;
+  }, [distId]);
+
+  const isClaimFormValid = useMemo(() => {
+    return (
+      !secretError &&
+      !amountError &&
+      !saltError &&
+      !distIdError &&
+      recipientSecret.trim().length > 0 &&
+      parsedClaimAmount > 0n &&
+      salt.trim().length > 0 &&
+      distId.trim().length > 0 &&
+      (!vaultState?.totalVaultFunds || parsedClaimAmount <= vaultState.totalVaultFunds)
+    );
+  }, [
+    secretError,
+    amountError,
+    saltError,
+    distIdError,
+    recipientSecret,
+    parsedClaimAmount,
+    salt,
+    distId,
+    vaultState?.totalVaultFunds,
+  ]);
 
   // -------------------------------------------------------------------------
   // Dynamic Real Templates: Harmonize on-chain allocations + presets
@@ -315,8 +384,9 @@ export const ClaimPage: React.FC = () => {
   // -------------------------------------------------------------------------
   const handleRegisterCurrentAllocation = async (source: 'banner' | 'main' = 'main') => {
     if (registerAction.isProcessing || claimAction.isProcessing || isProving) return;
-    if (!recipientSecret || !amount || BigInt(amount) <= 0n || !salt) {
-      toast.error('Please provide valid recipient secret, amount, and salt to register.', {
+    if (!isClaimFormValid) {
+      const msg = amountError || secretError || saltError || distIdError || 'Please provide valid recipient secret, amount, and salt to register.';
+      toast.error(msg, {
         title: 'Missing Parameters',
       });
       return;
@@ -432,8 +502,9 @@ export const ClaimPage: React.FC = () => {
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (claimAction.isProcessing || registerAction.isProcessing || isProving) return;
-    if (!amount || BigInt(amount) <= 0n) {
-      toast.error('Claim amount must be greater than zero.', { title: 'Invalid Amount' });
+    if (!isClaimFormValid) {
+      const msg = amountError || secretError || saltError || distIdError || 'Please fix all inline errors before claiming.';
+      toast.error(msg, { title: 'Invalid Form' });
       return;
     }
 
@@ -887,17 +958,31 @@ export const ClaimPage: React.FC = () => {
               value={recipientSecret}
               onChange={(e) => setRecipientSecret(e.target.value)}
               placeholder="32-byte hex secret or passphrase seed"
-              className="editorial-input editorial-input-mono text-xs text-text"
+              className={`editorial-input editorial-input-mono text-xs text-text ${
+                secretError ? 'editorial-input-error' : ''
+              }`}
             />
+            <FieldError message={secretError} />
           </div>
 
           {/* Amount & Salt */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="editorial-label inline-flex items-center gap-1">
-                <span>Allocated Payout Amount (tDUST)</span>
-                <InfoTooltip term="tDUST" />
-              </label>
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                <label className="editorial-label inline-flex items-center gap-1 mb-0">
+                  <span>Allocated Payout Amount (tDUST)</span>
+                  <InfoTooltip term="tDUST" />
+                </label>
+                <span
+                  className={`remaining-counter-badge ${
+                    remainingVaultBalance < 0n
+                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  }`}
+                >
+                  Remaining: {remainingVaultBalance < 0n ? `-${Number(-remainingVaultBalance).toLocaleString()}` : Number(remainingVaultBalance).toLocaleString()} tDUST
+                </span>
+              </div>
               <input
                 type="number"
                 min="1"
@@ -905,8 +990,11 @@ export const ClaimPage: React.FC = () => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 25000"
-                className="editorial-input editorial-input-mono text-sm font-bold text-sky-400"
+                className={`editorial-input editorial-input-mono text-sm font-bold text-sky-400 ${
+                  amountError ? 'editorial-input-error' : ''
+                }`}
               />
+              <FieldError message={amountError} />
             </div>
 
             <div>
@@ -920,8 +1008,11 @@ export const ClaimPage: React.FC = () => {
                 value={salt}
                 onChange={(e) => setSalt(e.target.value)}
                 placeholder="256-bit entropy salt"
-                className="editorial-input editorial-input-mono text-xs text-muted"
+                className={`editorial-input editorial-input-mono text-xs text-muted ${
+                  saltError ? 'editorial-input-error' : ''
+                }`}
               />
+              <FieldError message={saltError} />
             </div>
           </div>
 
@@ -937,8 +1028,11 @@ export const ClaimPage: React.FC = () => {
               value={distId}
               onChange={(e) => setDistId(e.target.value)}
               placeholder="Distribution identifier"
-              className="editorial-input editorial-input-mono text-xs text-muted"
+              className={`editorial-input editorial-input-mono text-xs text-muted ${
+                distIdError ? 'editorial-input-error' : ''
+              }`}
             />
+            <FieldError message={distIdError} />
           </div>
 
           {/* Nullifier Secret */}
@@ -1174,8 +1268,8 @@ export const ClaimPage: React.FC = () => {
                   type="submit"
                   isProcessing={claimAction.isProcessing || (isProving && !registerAction.isProcessing)}
                   elapsedSeconds={claimAction.elapsedSeconds || provingElapsedSeconds}
-                  disabled={registerAction.isProcessing}
-                  className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                  disabled={!isClaimFormValid || registerAction.isProcessing}
+                  className="btn-pill btn-pill-sky flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <ShieldCheck size={16} />
                   <span>Prove Entitlement & Settle Claim (1AM Wallet)</span>
@@ -1195,8 +1289,8 @@ export const ClaimPage: React.FC = () => {
                   onClick={() => handleRegisterCurrentAllocation('main')}
                   isProcessing={registerAction.isProcessing}
                   elapsedSeconds={registerAction.elapsedSeconds}
-                  disabled={claimAction.isProcessing || isProving}
-                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm"
+                  disabled={!isClaimFormValid || claimAction.isProcessing || isProving}
+                  className="btn-pill flex-1 py-3.5 px-6 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-amber-500 hover:bg-amber-400 text-ink border border-amber-600 transition-colors shadow-sm"
                 >
                   <ShieldCheck size={16} />
                   <span>Register Allocation on Contract First (1AM Wallet)</span>
@@ -1213,6 +1307,18 @@ export const ClaimPage: React.FC = () => {
                 Simulate Cheat (+10k tDUST)
               </button>
             </div>
+            {!isClaimFormValid && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-400 pt-1 font-medium">
+                <AlertCircle size={13} className="shrink-0" />
+                <span>
+                  {amountError ||
+                    secretError ||
+                    saltError ||
+                    distIdError ||
+                    'Complete all required fields with positive amounts to submit.'}
+                </span>
+              </div>
+            )}
             <p className="text-[11px] text-muted text-center sm:text-left">
               {isCurrentOnChain ? (
                 <>
